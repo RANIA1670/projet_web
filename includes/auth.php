@@ -25,7 +25,15 @@ function cityzen_apply_session_user(array $row): void
     $_SESSION['cityzen_user'] = [
         'id' => (int) ($row['id'] ?? 0),
         'username' => (string) ($row['username'] ?? ''),
+        'full_name' => (string) ($row['full_name'] ?? ''),
+        'email' => (string) ($row['email'] ?? ''),
+        'birth_date' => (string) ($row['birth_date'] ?? ''),
+        'postal_code' => (string) ($row['postal_code'] ?? ''),
+        'city' => (string) ($row['city'] ?? ''),
+        'phone' => (string) ($row['phone'] ?? ''),
+        'profile_photo' => (string) ($row['profile_photo'] ?? ''),
         'role' => (string) ($row['role'] ?? 'user'),
+        'blocked' => (int) ($row['blocked'] ?? 0),
     ];
     unset($_SESSION['cityzen_agent']);
 }
@@ -49,15 +57,19 @@ function cityzen_is_agent(): bool
     return ($_SESSION['cityzen_user']['role'] ?? '') === 'admin';
 }
 
-function cityzen_authenticate(string $user, string $pass): bool
+function cityzen_authenticate_result(string $user, string $pass): array
 {
     cityzen_session_start();
-    $row = cityzen_find_user_by_username($user);
+    $row = cityzen_find_user_by_login($user);
+
+    if ($row !== null && cityzen_is_user_blocked($row)) {
+        return ['ok' => false, 'error' => 'Votre compte est bloque. Contactez un administrateur.'];
+    }
 
     if ($row !== null && cityzen_verify_password($row, $pass)) {
         cityzen_apply_session_user($row);
 
-        return true;
+        return ['ok' => true];
     }
 
     $c = cityzen_agent_credentials();
@@ -65,13 +77,23 @@ function cityzen_authenticate(string $user, string $pass): bool
         cityzen_apply_session_user([
             'id' => 0,
             'username' => $c['user'],
+            'full_name' => '',
+            'email' => '',
             'role' => 'admin',
+            'blocked' => 0,
         ]);
 
-        return true;
+        return ['ok' => true];
     }
 
-    return false;
+    return ['ok' => false, 'error' => 'Identifiants incorrects.'];
+}
+
+function cityzen_authenticate(string $user, string $pass): bool
+{
+    $result = cityzen_authenticate_result($user, $pass);
+
+    return (bool) ($result['ok'] ?? false);
 }
 
 /** @deprecated Utiliser cityzen_authenticate ; conserve la compatibilite avec les pages existantes */
@@ -107,14 +129,40 @@ function cityzen_csrf_validate(?string $token): bool
 function cityzen_user_initials(): string
 {
     cityzen_session_start();
-    $name = (string) ($_SESSION['cityzen_user']['username'] ?? '');
+    $name = trim((string) ($_SESSION['cityzen_user']['full_name'] ?? ''));
+    if ($name === '') {
+        $name = (string) ($_SESSION['cityzen_user']['username'] ?? '');
+    }
     if ($name !== '') {
+        $parts = preg_split('/\s+/', trim($name)) ?: [];
+        if (count($parts) >= 2) {
+            $first = mb_substr((string) $parts[0], 0, 1);
+            $second = mb_substr((string) $parts[1], 0, 1);
+
+            return mb_strtoupper($first . $second);
+        }
+
         return mb_strtoupper(mb_substr($name, 0, 2));
     }
 
     global $cityzen;
 
     return (string) ($cityzen['user']['initials'] ?? '??');
+}
+
+function cityzen_user_avatar_url(): ?string
+{
+    cityzen_session_start();
+    $raw = trim((string) ($_SESSION['cityzen_user']['profile_photo'] ?? ''));
+    if ($raw === '') {
+        return null;
+    }
+
+    if (!str_starts_with($raw, '/')) {
+        return null;
+    }
+
+    return cityzen_asset(ltrim($raw, '/'));
 }
 
 /**
@@ -156,6 +204,7 @@ function cityzen_full_public_nav(array $items): array
 {
     $nav = cityzen_public_nav_items($items);
     if (cityzen_is_logged_in()) {
+        $nav[] = ['key' => 'settings', 'label' => 'Parametres', 'url' => '/admin/settings.php'];
         $nav[] = ['key' => 'logout', 'label' => 'Deconnexion', 'url' => '/admin/logout.php'];
     } else {
         $nav[] = ['key' => 'register', 'label' => 'Creer un compte', 'url' => '/register.php'];

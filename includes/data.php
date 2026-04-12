@@ -1,9 +1,11 @@
 <?php
 
+$cityzenNow = new DateTimeImmutable('now');
+
 $cityzen = [
     'app_name' => 'CityZen',
     'city_name' => 'Municipalite de Tunis',
-    'current_date' => 'Lundi 6 Avr. 2026',
+    'current_date' => $cityzenNow->format('d/m/Y H:i'),
     'user' => [
         'name' => 'Admin',
         'initials' => 'AD',
@@ -121,8 +123,8 @@ $cityzen = [
         ['key' => 'transport', 'label' => 'Transports', 'url' => '#transports'],
         ['key' => 'waste', 'label' => 'Dechets', 'url' => '#dechets'],
         ['key' => 'citizens', 'label' => 'Citoyens', 'url' => '#citoyens'],
-        ['key' => 'users', 'label' => 'Utilisateurs', 'url' => '#utilisateurs'],
-        ['key' => 'settings', 'label' => 'Parametres', 'url' => '#parametres'],
+        ['key' => 'users', 'label' => 'Utilisateurs', 'url' => '/admin/users.php'],
+        ['key' => 'settings', 'label' => 'Parametres', 'url' => '/admin/settings.php'],
         ['key' => 'logout', 'label' => 'Deconnexion', 'url' => '/admin/logout.php'],
     ],
     'public_menu' => [

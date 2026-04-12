@@ -24,14 +24,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $pass = (string) ($_POST['pass'] ?? '');
         $next = cityzen_safe_next((string) ($_POST['next'] ?? ''));
 
-        if (cityzen_authenticate($user, $pass)) {
+        $auth = cityzen_authenticate_result($user, $pass);
+        if (($auth['ok'] ?? false) === true) {
             $role = (string) ($_SESSION['cityzen_user']['role'] ?? 'user');
             $target = cityzen_post_login_redirect($role, $next);
             header('Location: ' . $target, true, 302);
             exit;
         }
 
-        $error = 'Identifiants incorrects.';
+        $error = (string) ($auth['error'] ?? 'Identifiants incorrects.');
     }
 }
 
@@ -62,7 +63,7 @@ cityzen_render_head('Connexion');
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(cityzen_csrf_token()) ?>">
         <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">
         <label class="login-field">
-          <span>Nom d'utilisateur</span>
+          <span>Email ou nom d'utilisateur</span>
           <input type="text" name="user" autocomplete="username" required>
         </label>
         <label class="login-field">
@@ -71,6 +72,7 @@ cityzen_render_head('Connexion');
         </label>
         <button type="submit" class="login-submit">Se connecter</button>
       </form>
+      <p class="login-footer-link"><a href="<?= htmlspecialchars(cityzen_asset('admin/forgot_password.php')) ?>">Mot de passe oublie ?</a></p>
 
       <p class="login-footer-link">Pas encore de compte ? <a href="<?= htmlspecialchars(cityzen_asset('register.php')) ?>">S'inscrire</a></p>
 

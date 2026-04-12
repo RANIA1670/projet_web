@@ -3,11 +3,15 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includes/data.php';
+require_once __DIR__ . '/../includes/users_store.php';
+
+$userStats = cityzen_user_stats();
 
 echo json_encode([
     'app' => $cityzen['app_name'],
     'city' => $cityzen['city_name'],
     'date' => $cityzen['current_date'],
+    'user_stats' => $userStats,
     'stats' => $cityzen['stats'],
     'districts' => $cityzen['districts'],
     'recent_reports' => $cityzen['recent_reports'],
