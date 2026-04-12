@@ -55,6 +55,24 @@ class Equipment
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findWithType(int $id): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT e.id, e.name, e.status, e.location, e.type_id, e.last_maintenance, e.latitude, e.longitude,
+                    t.category_name AS type_category_name, t.icon AS type_icon
+             FROM equipment e
+             INNER JOIN type_equipment t ON t.id = e.type_id
+             WHERE e.id = :id'
+        );
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    /**
      * @param array{name:string,status:string,location:string,type_id:int,last_maintenance?:?string,latitude?:?float,longitude?:?float} $data
      */
     public function create(array $data): int

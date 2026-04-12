@@ -16,27 +16,20 @@ cityzen_render_head('Accueil citoyen');
         <a href="<?= htmlspecialchars($href) ?>" class="<?= $item['key'] === 'home' ? 'is-active' : '' ?>">
           <?= htmlspecialchars($item['label']) ?>
         </a>
+        <?php if ($item['key'] === 'equipment' && cityzen_is_logged_in() && cityzen_current_user_id() > 0): ?>
+          <a href="<?= htmlspecialchars(cityzen_asset('equipment/my-reservations.php')) ?>">Mes réservations</a>
+        <?php endif; ?>
       <?php endforeach; ?>
     </nav>
     <div class="topbar-actions">
-      <?php if (cityzen_is_logged_in()): ?>
-        <?php $avatarUrl = cityzen_user_avatar_url(); ?>
-        <a href="<?= htmlspecialchars(cityzen_asset('admin/settings.php')) ?>" aria-label="Ouvrir les parametres">
-          <?php if ($avatarUrl !== null): ?>
-            <img class="avatar avatar-link avatar-photo" src="<?= htmlspecialchars($avatarUrl) ?>" alt="Photo de profil">
-          <?php else: ?>
-            <span class="avatar avatar-success avatar-link"><?= htmlspecialchars(cityzen_user_initials()) ?></span>
-          <?php endif; ?>
-        </a>
-      <?php else: ?>
-        <a class="avatar avatar-success avatar-link" href="<?= htmlspecialchars(cityzen_asset('admin/login.php')) ?>" aria-label="Connexion">IN</a>
-      <?php endif; ?>
+      <button class="avatar avatar-warning" type="button">O</button>
+      <button class="avatar avatar-success" type="button"><?= htmlspecialchars(cityzen_user_initials()) ?></button>
     </div>
   </header>
 
   <main class="page public-page">
     <section class="hero">
-      <p class="hero-kicker">SIGNALEMENT - PARTICIPATION - OPEN DATA</p>
+      <p class="hero-kicker">SIGNALEMENT - PARTICIPATION - EQUIPEMENT</p>
       <h1>Votre ville, <span>vos actions</span></h1>
       <p class="hero-copy">Signalez un incident, votez pour un projet, suivez l'etat de votre quartier. Le <a href="<?= htmlspecialchars(cityzen_asset('admin/index.php')) ?>">portail municipal</a> prolonge ces services.
         <?php if (cityzen_is_agent()): ?>
@@ -134,10 +127,10 @@ cityzen_render_head('Accueil citoyen');
         <h2>Projets citoyens</h2>
         <p>38 projets sont actuellement soumis au vote: mobilite, eclairage, espaces verts et modernisation des quartiers.</p>
       </article>
-      <article class="info-card" id="open-data">
-        <h2>Open Data</h2>
-        <p>Les donnees du tableau de bord sont exposees en JSON pour faciliter l'integration avec d'autres services municipaux.</p>
-        <a class="data-link" href="<?= htmlspecialchars(cityzen_asset('api/dashboard.php')) ?>">Voir l'API dashboard</a>
+      <article class="info-card" id="equipment">
+        <h2>Équipement municipal</h2>
+        <p>Consultez le matériel mis à disposition, les lieux et les créneaux, puis déposez une demande de réservation en ligne (validation par un agent).</p>
+        <a class="data-link" href="<?= htmlspecialchars(cityzen_asset('equipment/index.php')) ?>">Voir le catalogue équipement</a>
       </article>
     </section>
   </main>

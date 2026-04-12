@@ -135,7 +135,7 @@ class Reservation
     public function find(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, equipment_id, user_id, start_date, end_date, purpose, status, rejection_reason, returned_at
+            'SELECT id, equipment_id, user_id, extension_of_id, start_date, end_date, purpose, usage_purpose, status, rejection_reason, returned_at
              FROM reservation WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);
@@ -146,18 +146,154 @@ class Reservation
     public function create(array $data): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO reservation (equipment_id, user_id, start_date, end_date, purpose, status)
-             VALUES (:e, :u, :sd, :ed, :p, :st)'
+            'INSERT INTO reservation (equipment_id, user_id, extension_of_id, start_date, end_date, purpose, usage_purpose, status)
+             VALUES (:e, :u, :ext, :sd, :ed, :p, :up, :st)'
         );
         $stmt->execute([
-            ':e'  => $data['equipment_id'],
-            ':u'  => $data['user_id'] ?? null,
-            ':sd' => $data['start_date'],
-            ':ed' => $data['end_date'],
-            ':p'  => $data['purpose'] ?? null,
-            ':st' => $data['status'],
+            ':e'   => $data['equipment_id'],
+            ':u'   => $data['user_id'] ?? null,
+            ':ext' => $data['extension_of_id'] ?? null,
+            ':sd'  => $data['start_date'],
+            ':ed'  => $data['end_date'],
+            ':p'   => $data['purpose'] ?? null,
+            ':up'  => $data['usage_purpose'] ?? null,
+            ':st'  => $data['status'],
         ]);
         return (int) $this->pdo->lastInsertId();
+    }
+
+    /** Prochaine fin de blocage active (pending/approved) ; null = aucune plage future. */
+    public function latestBlockingEnd(int $equipmentId): ?string
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT MAX(end_date) AS mx FROM reservation
+             WHERE equipment_id = :eq AND status IN (\'pending\',\'approved\') AND end_date > NOW()'
+        );
+        $stmt->execute([':eq' => $equipmentId]);
+        $mx = $stmt->fetchColumn();
+        if ($mx === false || $mx === null) {
+            return null;
+        }
+
+        return (string) $mx;
+    }
+
+    /**
+     * Plages déjà bloquées (pending / approved) pour calendrier citoyen.
+     *
+     * @return list<array{start:string,end:string}>
+     */
+    public function busyRangesForEquipment(int $equipmentId): array
+    {
+        $sql = 'SELECT start_date, end_date FROM reservation
+                WHERE equipment_id = :eq
+                  AND status IN (\'pending\', \'approved\')
+                ORDER BY start_date ASC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':eq' => $equipmentId]);
+        $out = [];
+        while ($row = $stmt->fetch()) {
+            $out[] = [
+                'start' => (string) $row['start_date'],
+                'end'   => (string) $row['end_date'],
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listForUser(int $userId): array
+    {
+        $sql = 'SELECT r.id, r.equipment_id, r.extension_of_id, r.start_date, r.end_date, r.purpose, r.usage_purpose,
+                       r.status, r.rejection_reason, r.created_at, e.name AS equipment_name
+                FROM reservation r
+                INNER JOIN equipment e ON e.id = r.equipment_id
+                WHERE r.user_id = :u
+                ORDER BY r.start_date DESC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':u' => $userId]);
+
+        return $stmt->fetchAll();
+    }
+
+    public function cancelByUser(int $reservationId, int $userId): bool
+    {
+        $row = $this->find($reservationId);
+        if ($row === null || (int) ($row['user_id'] ?? 0) !== $userId) {
+            return false;
+        }
+        $st = (string) ($row['status'] ?? '');
+        if ($st === 'pending') {
+            $stmt = $this->pdo->prepare(
+                'UPDATE reservation SET status = \'cancelled\' WHERE id = :id AND user_id = :u AND status = \'pending\''
+            );
+            $stmt->execute([':id' => $reservationId, ':u' => $userId]);
+
+            return $stmt->rowCount() > 0;
+        }
+        if ($st === 'approved') {
+            $stmt = $this->pdo->prepare(
+                'UPDATE reservation SET status = \'cancelled\' WHERE id = :id AND user_id = :u AND status = \'approved\' AND start_date > NOW()'
+            );
+            $stmt->execute([':id' => $reservationId, ':u' => $userId]);
+            if ($stmt->rowCount() === 0) {
+                return false;
+            }
+            $eqId = (int) $row['equipment_id'];
+            $cnt = $this->pdo->prepare(
+                'SELECT COUNT(*) FROM reservation WHERE equipment_id = :e AND status IN (\'pending\',\'approved\')'
+            );
+            $cnt->execute([':e' => $eqId]);
+            if ((int) $cnt->fetchColumn() === 0) {
+                $this->pdo->prepare('UPDATE equipment SET status = \'available\' WHERE id = :e')->execute([':e' => $eqId]);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Demande de prolongation : nouvelle réservation en pending après la fin de la réservation approuvée parente.
+     */
+    public function createExtensionRequest(int $parentId, int $userId, string $newEndDatetime): ?int
+    {
+        $parent = $this->find($parentId);
+        if ($parent === null
+            || (int) ($parent['user_id'] ?? 0) !== $userId
+            || ($parent['status'] ?? '') !== 'approved'
+        ) {
+            return null;
+        }
+        if (strtotime((string) $parent['end_date']) <= time()) {
+            return null;
+        }
+        $eqId = (int) $parent['equipment_id'];
+        $parentEndTs = strtotime((string) $parent['end_date']);
+        $newEndTs = strtotime($newEndDatetime);
+        if ($parentEndTs === false || $newEndTs === false || $newEndTs <= $parentEndTs) {
+            return null;
+        }
+        $start = (string) $parent['end_date'];
+        $end = date('Y-m-d H:i:s', $newEndTs);
+        if ($this->hasOverlap($eqId, $start, $end, null)) {
+            return null;
+        }
+
+        return $this->create([
+            'equipment_id'     => $eqId,
+            'user_id'          => $userId,
+            'extension_of_id'  => $parentId,
+            'start_date'       => $start,
+            'end_date'         => $end,
+            'purpose'          => 'Prolongation (demande citoyenne)',
+            'usage_purpose'    => null,
+            'status'           => 'pending',
+        ]);
     }
 
     public function approve(int $id, bool $markEmailSent): bool

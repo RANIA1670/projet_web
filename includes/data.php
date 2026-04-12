@@ -1,11 +1,9 @@
 <?php
 
-$cityzenNow = new DateTimeImmutable('now');
-
 $cityzen = [
     'app_name' => 'CityZen',
     'city_name' => 'Municipalite de Tunis',
-    'current_date' => $cityzenNow->format('d/m/Y H:i'),
+    'current_date' => 'Lundi 6 Avr. 2026',
     'user' => [
         'name' => 'Admin',
         'initials' => 'AD',
@@ -121,6 +119,7 @@ $cityzen = [
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'air', 'label' => 'Qualite air', 'url' => '#qualite-air'],
         ['key' => 'equipment', 'label' => 'Equipement', 'url' => '/admin/equipment.php'],
+        ['key' => 'eq-tickets', 'label' => 'Tickets equipement', 'url' => '/admin/equipment_tickets.php'],
         ['key' => 'waste', 'label' => 'Dechets', 'url' => '#dechets'],
         ['key' => 'citizens', 'label' => 'Citoyens', 'url' => '#citoyens'],
         ['key' => 'users', 'label' => 'Utilisateurs', 'url' => '/admin/users.php'],
@@ -131,7 +130,7 @@ $cityzen = [
         ['key' => 'home', 'label' => 'Accueil', 'url' => '/index.php'],
         ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
-        ['key' => 'open-data', 'label' => 'Open Data', 'url' => '#open-data'],
+        ['key' => 'equipment', 'label' => 'Equipement', 'url' => '/equipment/index.php'],
         ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/admin/index.php'],
         ['key' => 'back-office', 'label' => 'Back-office', 'url' => '/admin/dashboard.php'],
     ],

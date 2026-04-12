@@ -16,6 +16,9 @@ cityzen_render_head('Portail citoyen');
         <a href="<?= htmlspecialchars($href) ?>" class="<?= $item['key'] === 'portail' ? 'is-active' : '' ?>">
           <?= htmlspecialchars($item['label']) ?>
         </a>
+        <?php if (($item['key'] ?? '') === 'equipment' && cityzen_is_logged_in() && cityzen_current_user_id() > 0): ?>
+          <a href="<?= htmlspecialchars(cityzen_asset('equipment/my-reservations.php')) ?>">Mes réservations</a>
+        <?php endif; ?>
       <?php endforeach; ?>
     </nav>
     <div class="topbar-actions">

@@ -46,6 +46,27 @@ function cityzen_is_logged_in(): bool
     return is_array($u) && ($u['username'] ?? '') !== '';
 }
 
+function cityzen_current_user_id(): int
+{
+    cityzen_session_start();
+    $u = $_SESSION['cityzen_user'] ?? null;
+
+    return is_array($u) ? (int) ($u['id'] ?? 0) : 0;
+}
+
+/** Connexion obligatoire (compte applicatif avec id > 0). */
+function cityzen_require_citizen_login(): void
+{
+    if (cityzen_is_logged_in() && cityzen_current_user_id() > 0) {
+        return;
+    }
+
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    $path = strtok($uri, '?') ?: '';
+    header('Location: ' . cityzen_login_url(cityzen_safe_next($path)), true, 302);
+    exit;
+}
+
 function cityzen_is_agent(): bool
 {
     cityzen_session_start();

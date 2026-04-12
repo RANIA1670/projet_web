@@ -6,6 +6,7 @@ USE cityzen;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS reservation;
+DROP TABLE IF EXISTS equipment_issue;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS type_equipment;
 SET FOREIGN_KEY_CHECKS = 1;
@@ -37,10 +38,12 @@ CREATE TABLE reservation (
     id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     equipment_id      INT UNSIGNED    NOT NULL,
     user_id           INT UNSIGNED    NULL,
+    extension_of_id   INT UNSIGNED    NULL,
     start_date        DATETIME        NOT NULL,
     end_date          DATETIME        NOT NULL,
     purpose           TEXT            NULL,
-    status            ENUM('pending','approved','rejected','returned','no_show') NOT NULL DEFAULT 'pending',
+    usage_purpose     ENUM('event','repair','inspection') NULL,
+    status            ENUM('pending','approved','rejected','returned','no_show','cancelled') NOT NULL DEFAULT 'pending',
     rejection_reason  TEXT            NULL,
     returned_at       DATETIME        NULL,
     notify_email_sent TINYINT(1)      NOT NULL DEFAULT 0,
@@ -50,7 +53,29 @@ CREATE TABLE reservation (
         ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_reservation_user
         FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_reservation_extension
+        FOREIGN KEY (extension_of_id) REFERENCES reservation(id)
         ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE equipment_issue (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    equipment_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NULL,
+    issue_type ENUM('not_working','damaged','lost') NOT NULL,
+    photo_path VARCHAR(255) NULL,
+    description TEXT NOT NULL,
+    status ENUM('open','acknowledged','resolved') NOT NULL DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_issue_equipment
+        FOREIGN KEY (equipment_id) REFERENCES equipment(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_issue_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    KEY idx_issue_status (status),
+    KEY idx_issue_equipment (equipment_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO type_equipment (category_name, icon, daily_cost, warranty_months, default_maintenance_frequency_months) VALUES
