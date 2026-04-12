@@ -36,7 +36,10 @@ function cityzen_icon(string $status): string
     };
 }
 
-function cityzen_render_head(string $title): void
+/**
+ * @param  list<string>  $extraStylesheets  URLs absolues ou chemins (seront échappés)
+ */
+function cityzen_render_head(string $title, array $extraStylesheets = [], string $bodyClass = ''): void
 {
     ?>
     <!DOCTYPE html>
@@ -49,8 +52,11 @@ function cityzen_render_head(string $title): void
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
       <link rel="stylesheet" href="<?= htmlspecialchars(cityzen_asset('assets/css/style.css')) ?>">
+      <?php foreach ($extraStylesheets as $href): ?>
+      <link rel="stylesheet" href="<?= htmlspecialchars($href, ENT_QUOTES, 'UTF-8') ?>">
+      <?php endforeach; ?>
     </head>
-    <body>
+    <body<?= $bodyClass !== '' ? ' class="' . htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
     <?php
 }
 

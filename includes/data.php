@@ -118,7 +118,7 @@ $cityzen = [
         ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'air', 'label' => 'Qualite air', 'url' => '#qualite-air'],
-        ['key' => 'transport', 'label' => 'Transports', 'url' => '#transports'],
+        ['key' => 'equipment', 'label' => 'Equipement', 'url' => '/admin/equipment.php'],
         ['key' => 'waste', 'label' => 'Dechets', 'url' => '#dechets'],
         ['key' => 'citizens', 'label' => 'Citoyens', 'url' => '#citoyens'],
         ['key' => 'users', 'label' => 'Utilisateurs', 'url' => '#utilisateurs'],
