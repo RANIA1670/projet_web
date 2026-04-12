@@ -4,34 +4,7 @@ require_once __DIR__ . '/../includes/layout.php';
 
 cityzen_require_agent();
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['set_user_role'])) {
-    if (!cityzen_csrf_validate($_POST['csrf'] ?? null)) {
-        $_SESSION['cityzen_dash_flash'] = ['type' => 'error', 'msg' => 'Jeton de securite invalide. Rechargez la page.'];
-    } else {
-        $uid = (int) ($_POST['user_id'] ?? 0);
-        $role = (string) ($_POST['new_role'] ?? '');
-        if (!in_array($role, ['admin', 'user'], true)) {
-            $_SESSION['cityzen_dash_flash'] = ['type' => 'error', 'msg' => 'Role invalide.'];
-        } else {
-            $res = cityzen_update_user_role($uid, $role);
-            if (!$res['ok']) {
-                $_SESSION['cityzen_dash_flash'] = ['type' => 'error', 'msg' => (string) ($res['error'] ?? 'Erreur.')];
-            } else {
-                $sid = (int) ($_SESSION['cityzen_user']['id'] ?? 0);
-                if ($sid === $uid && isset($res['user']) && is_array($res['user'])) {
-                    cityzen_apply_session_user($res['user']);
-                }
-                $_SESSION['cityzen_dash_flash'] = ['type' => 'success', 'msg' => 'Role mis a jour.'];
-            }
-        }
-    }
-    header('Location: ' . cityzen_asset('admin/dashboard.php') . '#utilisateurs', true, 303);
-    exit;
-}
-
-$dashFlash = $_SESSION['cityzen_dash_flash'] ?? null;
-unset($_SESSION['cityzen_dash_flash']);
-$allUsers = cityzen_users_load()['users'];
+$userStats = cityzen_user_stats();
 
 cityzen_render_head('Tableau de bord');
 ?>
@@ -55,35 +28,47 @@ cityzen_render_head('Tableau de bord');
     <header class="admin-header">
       <div>
         <h1>Tableau de bord - <?= htmlspecialchars($cityzen['city_name']) ?></h1>
-        <p class="admin-header-lead">Vue agents : les memes indicateurs et signalements que le portail public, orientes traitement.</p>
+        <p class="admin-header-lead">Le tableau de bord s&apos;appuie sur les comptes reels de la base pour suivre les utilisateurs, les admins, les citoyens simples et les comptes bloques.</p>
       </div>
       <div class="admin-user">
         <span><?= htmlspecialchars($cityzen['current_date']) ?></span>
-        <button class="avatar avatar-warning" type="button">O</button>
-        <button class="avatar avatar-success" type="button"><?= htmlspecialchars(cityzen_user_initials()) ?></button>
+        <?php $avatarUrl = cityzen_user_avatar_url(); ?>
+        <a href="<?= htmlspecialchars(cityzen_asset('admin/settings.php')) ?>" aria-label="Ouvrir les parametres">
+          <?php if ($avatarUrl !== null): ?>
+            <img class="avatar avatar-link avatar-photo" src="<?= htmlspecialchars($avatarUrl) ?>" alt="Photo de profil">
+          <?php else: ?>
+            <span class="avatar avatar-success avatar-link"><?= htmlspecialchars(cityzen_user_initials()) ?></span>
+          <?php endif; ?>
+        </a>
       </div>
     </header>
 
+    <section class="panel users-admin-section" id="utilisateurs">
+      <h2>Comptes utilisateurs</h2>
+      <p class="panel-lead">Gestion complete dans l&apos;espace dedie : liste, recherche, tri, pagination, modification, suppression et export PDF.</p>
+      <p><a class="users-admin-cta" href="<?= htmlspecialchars(cityzen_asset('admin/users.php')) ?>">Ouvrir la gestion des utilisateurs</a></p>
+    </section>
+
     <section class="admin-stats">
       <article class="admin-stat-card interactive-card" data-card>
-        <strong class="accent-green" data-count-to="<?= htmlspecialchars((string) $cityzen['stats']['reports']['value']) ?>"><?= htmlspecialchars((string) $cityzen['stats']['reports']['value']) ?></strong>
-        <span><?= htmlspecialchars($cityzen['stats']['reports']['label']) ?></span>
-        <small><?= htmlspecialchars($cityzen['stats']['reports']['trend']) ?></small>
+        <strong class="accent-green" data-count-to="<?= $userStats['total'] ?>"><?= $userStats['total'] ?></strong>
+        <span>Utilisateurs</span>
+        <small>Total des comptes en base</small>
       </article>
       <article class="admin-stat-card interactive-card" data-card>
-        <strong data-count-to="<?= htmlspecialchars(rtrim($cityzen['stats']['resolution']['value'], '%')) ?>" data-count-suffix="%"><?= htmlspecialchars($cityzen['stats']['resolution']['value']) ?></strong>
-        <span><?= htmlspecialchars($cityzen['stats']['resolution']['label']) ?></span>
-        <small><?= htmlspecialchars($cityzen['stats']['resolution']['trend']) ?></small>
+        <strong data-count-to="<?= $userStats['admins'] ?>"><?= $userStats['admins'] ?></strong>
+        <span>Administrateurs</span>
+        <small>Comptes avec acces admin</small>
       </article>
       <article class="admin-stat-card interactive-card" data-card>
-        <strong class="accent-orange" data-count-to="<?= htmlspecialchars((string) $cityzen['stats']['projects']['value']) ?>"><?= htmlspecialchars((string) $cityzen['stats']['projects']['value']) ?></strong>
-        <span><?= htmlspecialchars($cityzen['stats']['projects']['label']) ?></span>
-        <small><?= htmlspecialchars($cityzen['stats']['projects']['trend']) ?></small>
+        <strong class="accent-orange" data-count-to="<?= $userStats['users'] ?>"><?= $userStats['users'] ?></strong>
+        <span>Utilisateurs simples</span>
+        <small>Comptes citoyens</small>
       </article>
       <article class="admin-stat-card interactive-card" data-card>
-        <strong class="accent-red" data-count-to="<?= htmlspecialchars((string) $cityzen['stats']['alerts']['value']) ?>"><?= htmlspecialchars((string) $cityzen['stats']['alerts']['value']) ?></strong>
-        <span><?= htmlspecialchars($cityzen['stats']['alerts']['label']) ?></span>
-        <small><?= htmlspecialchars($cityzen['stats']['alerts']['trend']) ?></small>
+        <strong class="accent-red" data-count-to="<?= $userStats['blocked'] ?>"><?= $userStats['blocked'] ?></strong>
+        <span>Utilisateurs bloques</span>
+        <small>Acces desactive a la connexion</small>
       </article>
     </section>
 
@@ -125,52 +110,6 @@ cityzen_render_head('Tableau de bord');
           </div>
         </div>
       </article>
-    </section>
-
-    <section class="panel users-admin-section" id="utilisateurs">
-      <h2>Comptes utilisateurs</h2>
-      <p class="panel-lead">Les inscriptions creent un compte <strong>citoyen</strong>. Promouvez ou retirez le role administrateur ici (il doit toujours rester au moins un admin).</p>
-
-      <?php if (is_array($dashFlash) && isset($dashFlash['msg'])): ?>
-        <p class="admin-flash <?= ($dashFlash['type'] ?? '') === 'success' ? 'admin-flash-success' : 'admin-flash-error' ?>" role="status"><?= htmlspecialchars((string) $dashFlash['msg']) ?></p>
-      <?php endif; ?>
-
-      <div class="reports-table users-table">
-        <div class="table-head users-table-head">
-          <span>Utilisateur</span>
-          <span>Role</span>
-          <span>Inscription</span>
-          <span>Action</span>
-        </div>
-        <?php foreach ($allUsers as $urow): ?>
-          <?php
-            $uid = (int) ($urow['id'] ?? 0);
-            $uname = (string) ($urow['username'] ?? '');
-            $urole = (string) ($urow['role'] ?? 'user');
-            $udate = (string) ($urow['created_at'] ?? '');
-          ?>
-          <div class="table-row users-table-row">
-            <span><strong><?= htmlspecialchars($uname) ?></strong></span>
-            <span><em class="pill <?= $urole === 'admin' ? 'progress' : 'done' ?>"><?= $urole === 'admin' ? 'Administrateur' : 'Citoyen' ?></em></span>
-            <span class="users-date"><?= htmlspecialchars($udate) ?></span>
-            <span>
-              <form class="users-role-form" method="post" action="">
-                <input type="hidden" name="csrf" value="<?= htmlspecialchars(cityzen_csrf_token()) ?>">
-                <input type="hidden" name="set_user_role" value="1">
-                <input type="hidden" name="user_id" value="<?= $uid ?>">
-                <label class="users-role-label">
-                  <span class="visually-hidden">Nouveau role</span>
-                  <select name="new_role" class="users-role-select">
-                    <option value="user" <?= $urole === 'user' ? 'selected' : '' ?>>Citoyen</option>
-                    <option value="admin" <?= $urole === 'admin' ? 'selected' : '' ?>>Administrateur</option>
-                  </select>
-                </label>
-                <button type="submit" class="users-role-submit">Appliquer</button>
-              </form>
-            </span>
-          </div>
-        <?php endforeach; ?>
-      </div>
     </section>
 
     <section class="panel reports-table-section" id="citoyens">

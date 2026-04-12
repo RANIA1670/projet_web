@@ -19,8 +19,18 @@ cityzen_render_head('Portail citoyen');
       <?php endforeach; ?>
     </nav>
     <div class="topbar-actions">
-      <button class="avatar avatar-warning" type="button">O</button>
-      <button class="avatar avatar-success" type="button"><?= htmlspecialchars(cityzen_user_initials()) ?></button>
+      <?php if (cityzen_is_logged_in()): ?>
+        <?php $avatarUrl = cityzen_user_avatar_url(); ?>
+        <a href="<?= htmlspecialchars(cityzen_asset('admin/settings.php')) ?>" aria-label="Ouvrir les parametres">
+          <?php if ($avatarUrl !== null): ?>
+            <img class="avatar avatar-link avatar-photo" src="<?= htmlspecialchars($avatarUrl) ?>" alt="Photo de profil">
+          <?php else: ?>
+            <span class="avatar avatar-success avatar-link"><?= htmlspecialchars(cityzen_user_initials()) ?></span>
+          <?php endif; ?>
+        </a>
+      <?php else: ?>
+        <a class="avatar avatar-success avatar-link" href="<?= htmlspecialchars(cityzen_asset('admin/login.php')) ?>" aria-label="Connexion">IN</a>
+      <?php endif; ?>
     </div>
   </header>
 

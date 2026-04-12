@@ -19,14 +19,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (!cityzen_csrf_validate($_POST['csrf'] ?? null)) {
         $error = 'Session expiree : rechargez la page puis reessayez.';
     } else {
-        $username = (string) ($_POST['username'] ?? '');
+        $fullName = (string) ($_POST['full_name'] ?? '');
+        $email = (string) ($_POST['email'] ?? '');
         $pass = (string) ($_POST['pass'] ?? '');
         $pass2 = (string) ($_POST['pass2'] ?? '');
 
         if ($pass !== $pass2) {
             $error = 'Les mots de passe ne correspondent pas.';
         } else {
-            $result = cityzen_register_user($username, $pass);
+            $result = cityzen_register_user_with_email($email, $pass, $fullName);
 
             if (!$result['ok']) {
                 $error = (string) ($result['error'] ?? 'Inscription refusee.');
@@ -65,8 +66,12 @@ cityzen_render_head('Creer un compte');
       <form class="login-form" method="post" action="">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(cityzen_csrf_token()) ?>">
         <label class="login-field">
-          <span>Nom d'utilisateur</span>
-          <input type="text" name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[a-zA-Z0-9_]+" required>
+          <span>Nom complet</span>
+          <input type="text" name="full_name" autocomplete="name" maxlength="120" required>
+        </label>
+        <label class="login-field">
+          <span>Email</span>
+          <input type="email" name="email" autocomplete="email" maxlength="190" required>
         </label>
         <label class="login-field">
           <span>Mot de passe</span>
@@ -80,7 +85,7 @@ cityzen_render_head('Creer un compte');
         <button type="submit" class="login-submit">S'inscrire</button>
       </form>
 
-      <p class="login-hint">Les comptes sont enregistres dans la base MySQL <strong>cityzen</strong> (table <code>users</code>). Le role <strong>admin</strong> ne s'obtient pas a l'inscription. Un compte administrateur par defaut (<strong>agent</strong>) est cree si la table est vide : choisissez un <strong>autre</strong> nom d&apos;utilisateur pour vous inscrire.</p>
+      <p class="login-hint">L&apos;email est unique : un meme email ne peut pas creer plusieurs comptes. Le role <strong>admin</strong> ne s&apos;obtient pas a l&apos;inscription.</p>
 
       <p class="login-footer-link">Deja un compte ? <a href="<?= htmlspecialchars(cityzen_asset('admin/login.php')) ?>">Se connecter</a></p>
     </section>
