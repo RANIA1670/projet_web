@@ -62,5 +62,3 @@ function cityzen_render_footer(): void
     </html>
     <?php
 }
-
-require_once __DIR__ . '/auth.php';

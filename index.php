@@ -11,7 +11,7 @@ cityzen_render_head('Accueil citoyen');
       <span class="brand-text">City <strong>Zen</strong></span>
     </div>
     <nav class="main-nav">
-      <?php foreach (cityzen_full_public_nav($cityzen['public_menu']) as $item): ?>
+      <?php foreach ($cityzen['public_menu'] as $item): ?>
         <?php $href = str_starts_with($item['url'], '/') ? cityzen_asset(ltrim($item['url'], '/')) : $item['url']; ?>
         <a href="<?= htmlspecialchars($href) ?>" class="<?= $item['key'] === 'home' ? 'is-active' : '' ?>">
           <?= htmlspecialchars($item['label']) ?>
@@ -20,7 +20,7 @@ cityzen_render_head('Accueil citoyen');
     </nav>
     <div class="topbar-actions">
       <button class="avatar avatar-warning" type="button">O</button>
-      <button class="avatar avatar-success" type="button"><?= htmlspecialchars(cityzen_user_initials()) ?></button>
+      <button class="avatar avatar-success" type="button"><?= htmlspecialchars($cityzen['user']['initials']) ?></button>
     </div>
   </header>
 
@@ -28,45 +28,32 @@ cityzen_render_head('Accueil citoyen');
     <section class="hero">
       <p class="hero-kicker">SIGNALEMENT - PARTICIPATION - OPEN DATA</p>
       <h1>Votre ville, <span>vos actions</span></h1>
-      <p class="hero-copy">Signalez un incident, votez pour un projet, suivez l'etat de votre quartier. Le <a href="<?= htmlspecialchars(cityzen_asset('admin/index.php')) ?>">portail municipal</a> prolonge ces services.
-        <?php if (cityzen_is_agent()): ?>
-          Le <a href="<?= htmlspecialchars(cityzen_asset('admin/dashboard.php')) ?>">tableau de bord back-office</a> est disponible pour votre session.
-        <?php else: ?>
-          L'<a href="<?= htmlspecialchars(cityzen_login_url(cityzen_asset('admin/dashboard.php'))) ?>">espace agents</a> (connexion) permet d'acceder au back-office.
-        <?php endif; ?>
-      </p>
+      <p class="hero-copy">Signalez un incident, votez pour un projet, suivez l'etat de votre quartier.</p>
 
       <form class="search-bar" data-search-form>
         <input type="search" name="q" placeholder="Que signaler ou chercher ?" data-search-input>
         <button type="submit">Rechercher</button>
       </form>
-
-      <div class="quick-filters" data-filter-group>
-        <button type="button" class="filter-chip is-active" data-filter="all">Tous</button>
-        <button type="button" class="filter-chip" data-filter="urgent">Urgents</button>
-        <button type="button" class="filter-chip" data-filter="progress">En cours</button>
-        <button type="button" class="filter-chip" data-filter="new">Nouveaux</button>
-      </div>
     </section>
 
     <section class="stats-row">
-      <article class="stat-card interactive-card" data-card>
-        <strong data-count-to="<?= htmlspecialchars((string) $cityzen['stats']['reports']['value']) ?>"><?= htmlspecialchars((string) $cityzen['stats']['reports']['value']) ?></strong>
+      <article class="stat-card">
+        <strong><?= htmlspecialchars((string) $cityzen['stats']['reports']['value']) ?></strong>
         <span><?= htmlspecialchars($cityzen['stats']['reports']['label']) ?></span>
       </article>
-      <article class="stat-card interactive-card" data-card>
-        <strong class="accent-orange" data-count-to="<?= htmlspecialchars((string) $cityzen['stats']['projects']['value']) ?>"><?= htmlspecialchars((string) $cityzen['stats']['projects']['value']) ?></strong>
+      <article class="stat-card">
+        <strong class="accent-orange"><?= htmlspecialchars((string) $cityzen['stats']['projects']['value']) ?></strong>
         <span><?= htmlspecialchars($cityzen['stats']['projects']['label']) ?></span>
       </article>
-      <article class="stat-card interactive-card" data-card>
-        <strong data-count-to="<?= htmlspecialchars(rtrim($cityzen['stats']['resolution']['value'], '%')) ?>" data-count-suffix="%"><?= htmlspecialchars($cityzen['stats']['resolution']['value']) ?></strong>
+      <article class="stat-card">
+        <strong><?= htmlspecialchars($cityzen['stats']['resolution']['value']) ?></strong>
         <span><?= htmlspecialchars($cityzen['stats']['resolution']['label']) ?></span>
       </article>
     </section>
 
     <section class="services-grid">
       <?php foreach ($cityzen['services'] as $service): ?>
-        <article class="service-card interactive-card <?= $service['highlight'] ? 'is-highlighted' : '' ?>" data-card tabindex="0">
+        <article class="service-card <?= $service['highlight'] ? 'is-highlighted' : '' ?>">
           <div class="service-icon"><?= htmlspecialchars($service['icon']) ?></div>
           <h2><?= strtoupper(htmlspecialchars($service['title'])) ?></h2>
           <p><?= htmlspecialchars($service['description']) ?></p>
@@ -80,21 +67,12 @@ cityzen_render_head('Accueil citoyen');
     <section class="feed-section" id="signalements">
       <div class="section-header">
         <h2>Signalements recents</h2>
-        <div class="section-header-links">
-          <a href="<?= htmlspecialchars(cityzen_asset('admin/index.php')) ?>">Portail municipal</a>
-          <?php if (cityzen_is_agent()): ?>
-            <span class="section-header-sep" aria-hidden="true">|</span>
-            <a href="<?= htmlspecialchars(cityzen_asset('admin/dashboard.php')) ?>">Vue agents</a>
-          <?php else: ?>
-            <span class="section-header-sep" aria-hidden="true">|</span>
-            <a href="<?= htmlspecialchars(cityzen_login_url(cityzen_asset('admin/dashboard.php'))) ?>">Connexion</a>
-          <?php endif; ?>
-        </div>
+        <a href="<?= htmlspecialchars(cityzen_asset('admin/index.php')) ?>">Voir tout -></a>
       </div>
 
       <div class="report-list" data-report-list>
         <?php foreach ($cityzen['recent_reports'] as $report): ?>
-          <article class="report-item" data-report-item data-status="<?= htmlspecialchars($report['severity']) ?>" data-search-text="<?= htmlspecialchars(mb_strtolower($report['title'] . ' ' . $report['meta'] . ' ' . $report['category'])) ?>">
+          <article class="report-item" data-report-item data-search-text="<?= htmlspecialchars(mb_strtolower($report['title'] . ' ' . $report['meta'] . ' ' . $report['category'])) ?>">
             <div class="report-icon <?= htmlspecialchars($report['severity']) ?>">
               <?= htmlspecialchars(cityzen_icon($report['severity'])) ?>
             </div>
@@ -105,12 +83,6 @@ cityzen_render_head('Accueil citoyen');
             <div class="report-status">
               <strong class="<?= htmlspecialchars($report['severity']) ?>"><?= htmlspecialchars($report['status']) ?></strong>
               <span class="report-dots">.....</span>
-            </div>
-            <button type="button" class="report-toggle" data-report-toggle aria-expanded="false">Details</button>
-            <div class="report-details" data-report-details hidden>
-              <p><strong>Quartier:</strong> <?= htmlspecialchars($report['district']) ?></p>
-              <p><strong>Categorie:</strong> <?= htmlspecialchars($report['category']) ?></p>
-              <p><strong>Date:</strong> <?= htmlspecialchars($report['date']) ?></p>
             </div>
           </article>
         <?php endforeach; ?>
