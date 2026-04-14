@@ -126,6 +126,6 @@ $cityzen = [
         ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'open-data', 'label' => 'Open Data', 'url' => '#open-data'],
-        ['key' => 'gestion-forum', 'label' => 'Gestion Forum', 'url' => 'gestion_forum.html'],
+        ['key' => 'gestion-forum', 'label' => 'Gestion Forum', 'url' => 'gestion_forum.php'],
     ],
 ];
