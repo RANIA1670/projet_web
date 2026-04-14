@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CityZen Forum - Accueil</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-darker: #0b1221;
+      --bg-light: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-soft: #e0f2fe;
+      --success: #16a34a;
+      --warning: #f97316;
+      --danger: #ef4444;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header */
+    .header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    .header h1 a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .header nav {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .header nav a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .header nav a:hover {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* Main content */
+    .main {
+      padding: 2rem 0;
+      min-height: calc(100vh - 200px);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      font-size: 0.9rem;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Posts */
+    .posts-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .posts-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .posts-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .post-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .post-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .post-card h3 {
+      margin-bottom: 0.5rem;
+    }
+
+    .post-card h3 a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .post-card h3 a:hover {
+      color: var(--accent);
+    }
+
+    .post-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .post-content {
+      margin-bottom: 1rem;
+      color: var(--muted);
+    }
+
+    .post-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .post-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* Post detail */
+    .post-detail {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .post-full {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .post-full .post-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .post-full h1 {
+      margin-bottom: 1rem;
+    }
+
+    .post-full .post-meta {
+      margin-bottom: 0;
+    }
+
+    /* Replies */
+    .replies-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .replies-header {
+      margin-bottom: 2rem;
+    }
+
+    .replies-list {
+      margin-bottom: 2rem;
+    }
+
+    .reply {
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 0;
+    }
+
+    .reply:last-child {
+      border-bottom: none;
+    }
+
+    .reply .reply-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .reply .reply-content {
+      line-height: 1.6;
+    }
+
+    .reply-form-container {
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+    }
+
+    .reply-form {
+      margin-top: 1rem;
+    }
+
+    /* Forms */
+    .form-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      background: white;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 2rem;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .alert-success {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--bg-dark);
+      color: #f8fafc;
+      text-align: center;
+      padding: 2rem 0;
+      margin-top: 4rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .header nav {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .posts-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      .post-footer {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Modals */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal.show {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: scale(0.9) translateY(-20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .close:hover {
+      background: #f1f5f9;
+      color: var(--text);
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <h1><a href="front.html">CityZen Forum</a></h1>
+        <nav>
+          <a href="front.html">Accueil</a>
+          <a href="#create-post">Nouveau Post</a>
+          <a href="back.html">Administration</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <!-- Messages d'alerte -->
+      <div id="alerts"></div>
+
+      <!-- Page d'accueil -->
+      <div id="home-page">
+        <div class="posts-container">
+          <div class="posts-header">
+            <h2>Posts du Forum</h2>
+            <button class="btn btn-primary" onclick="showCreatePostModal()">Nouveau Post</button>
+          </div>
+
+          <div id="posts-list" class="posts-grid">
+            <div class="loading">Chargement des posts...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Détail d'un post -->
+      <div id="post-detail-page" style="display: none;">
+        <div class="post-detail">
+          <button class="btn btn-secondary" onclick="showHomePage()" style="margin-bottom: 1rem;">← Retour</button>
+          <div id="post-content"></div>
+        </div>
+      </div>
+
+      <!-- Création de post -->
+      <div id="create-post-page" style="display: none;">
+        <div class="form-container">
+          <button class="btn btn-secondary" onclick="showHomePage()" style="margin-bottom: 1rem;">← Retour</button>
+          <h1>Créer un nouveau post</h1>
+          <form id="create-post-form">
+            <div class="form-group">
+              <label for="post-title">Titre *</label>
+              <input type="text" id="post-title" required>
+            </div>
+
+            <div class="form-group">
+              <label for="post-author">Votre nom *</label>
+              <input type="text" id="post-author" required>
+            </div>
+
+            <div class="form-group">
+              <label for="post-email">Email (optionnel)</label>
+              <input type="email" id="post-email">
+            </div>
+
+            <div class="form-group">
+              <label for="post-content">Contenu *</label>
+              <textarea id="post-content" rows="8" required></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" onclick="showHomePage()">Annuler</button>
+              <button type="submit" class="btn btn-primary">Publier</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal pour créer un post -->
+  <div id="create-post-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Créer un nouveau post</h2>
+        <button class="close" onclick="closeCreatePostModal()">&times;</button>
+      </div>
+      <form id="create-post-modal-form">
+        <div class="form-group">
+          <label for="modal-post-title">Titre *</label>
+          <input type="text" id="modal-post-title" required>
+        </div>
+
+        <div class="form-group">
+          <label for="modal-post-author">Votre nom *</label>
+          <input type="text" id="modal-post-author" required>
+        </div>
+
+        <div class="form-group">
+          <label for="modal-post-email">Email (optionnel)</label>
+          <input type="email" id="modal-post-email">
+        </div>
+
+        <div class="form-group">
+          <label for="modal-post-content">Contenu *</label>
+          <textarea id="modal-post-content" rows="6" required></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeCreatePostModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary">Publier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal pour répondre -->
+  <div id="reply-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Répondre à ce post</h2>
+        <button class="close" onclick="closeReplyModal()">&times;</button>
+      </div>
+      <form id="reply-form">
+        <input type="hidden" id="reply-post-id">
+        <div class="form-group">
+          <label for="reply-author">Votre nom *</label>
+          <input type="text" id="reply-author" required>
+        </div>
+
+        <div class="form-group">
+          <label for="reply-email">Email (optionnel)</label>
+          <input type="email" id="reply-email">
+        </div>
+
+        <div class="form-group">
+          <label for="reply-content">Votre réponse *</label>
+          <textarea id="reply-content" rows="5" required></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeReplyModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary">Envoyer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 CityZen Forum. Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Données du forum
+    let posts = [];
+    let currentPost = null;
+
+    // Charger les données depuis localStorage
+    function loadData() {
+      const savedPosts = localStorage.getItem('forum_posts');
+      if (savedPosts) {
+        posts = JSON.parse(savedPosts);
+      } else {
+        // Données de démonstration
+        posts = [
+          {
+            id: 1,
+            title: "Bienvenue sur CityZen Forum",
+            content: "Bienvenue sur notre forum communautaire ! Ici vous pouvez partager vos idées, poser des questions et échanger avec d'autres membres de la communauté.",
+            author: "Admin",
+            email: "admin@cityzen.com",
+            date: "2026-04-14",
+            views: 15,
+            likes: 8,
+            status: "Publié",
+            replies: [
+              {
+                id: 1,
+                content: "Merci pour ce forum ! C'est super utile.",
+                author: "Marie L.",
+                email: "marie@email.com",
+                date: "2026-04-14",
+                status: "Validé"
+              }
+            ]
+          },
+          {
+            id: 2,
+            title: "Comment intégrer PDO en PHP ?",
+            content: "Bonjour, j'ai des difficultés à intégrer PDO dans mon projet PHP. Quelqu'un pourrait m'aider avec un exemple concret ?",
+            author: "Jean D.",
+            email: "jean@email.com",
+            date: "2026-04-13",
+            views: 23,
+            likes: 5,
+            status: "Publié",
+            replies: [
+              {
+                id: 2,
+                content: "Voici un exemple basique :\n\n```php\ntry {\n    $pdo = new PDO('mysql:host=localhost;dbname=test', 'user', 'pass');\n    $stmt = $pdo->prepare('SELECT * FROM users');\n    $stmt->execute();\n    $users = $stmt->fetchAll();\n} catch(PDOException $e) {\n    echo $e->getMessage();\n}\n```",
+                author: "Dev PHP",
+                email: "dev@email.com",
+                date: "2026-04-13",
+                status: "Validé"
+              }
+            ]
+          }
+        ];
+        saveData();
+      }
+    }
+
+    // Sauvegarder les données dans localStorage
+    function saveData() {
+      localStorage.setItem('forum_posts', JSON.stringify(posts));
+    }
+
+    // Afficher les messages d'alerte
+    function showAlert(message, type = 'success') {
+      const alertsDiv = document.getElementById('alerts');
+      alertsDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+      setTimeout(() => {
+        alertsDiv.innerHTML = '';
+      }, 5000);
+    }
+
+    // Afficher la page d'accueil
+    function showHomePage() {
+      document.getElementById('home-page').style.display = 'block';
+      document.getElementById('post-detail-page').style.display = 'none';
+      document.getElementById('create-post-page').style.display = 'none';
+      renderPosts();
+    }
+
+    // Afficher le détail d'un post
+    function showPostDetail(postId) {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      currentPost = post;
+      post.views++;
+
+      document.getElementById('home-page').style.display = 'none';
+      document.getElementById('post-detail-page').style.display = 'block';
+      document.getElementById('create-post-page').style.display = 'none';
+
+      renderPostDetail(post);
+      saveData();
+    }
+
+    // Afficher la page de création
+    function showCreatePostPage() {
+      document.getElementById('home-page').style.display = 'none';
+      document.getElementById('post-detail-page').style.display = 'none';
+      document.getElementById('create-post-page').style.display = 'block';
+    }
+
+    // Rendre la liste des posts
+    function renderPosts() {
+      const postsList = document.getElementById('posts-list');
+      postsList.innerHTML = '';
+
+      if (posts.length === 0) {
+        postsList.innerHTML = '<p style="text-align: center; color: var(--muted);">Aucun post pour le moment.</p>';
+        return;
+      }
+
+      posts.forEach(post => {
+        if (post.status === 'Publié') {
+          const postCard = document.createElement('article');
+          postCard.className = 'post-card';
+          postCard.innerHTML = `
+            <div class="post-header">
+              <h3><a href="#" onclick="showPostDetail(${post.id})">${post.title}</a></h3>
+              <div class="post-meta">
+                <span class="author">Par ${post.author}</span>
+                <span class="date">${formatDate(post.date)}</span>
+              </div>
+            </div>
+
+            <div class="post-content">
+              ${post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content}
+            </div>
+
+            <div class="post-footer">
+              <div class="post-stats">
+                <span>👁 ${post.views} vues</span>
+                <span>👍 ${post.likes} likes</span>
+                <span>💬 ${post.replies ? post.replies.length : 0} réponses</span>
+              </div>
+              <a href="#" onclick="showPostDetail(${post.id})" class="btn btn-secondary">Voir les réponses</a>
+            </div>
+          `;
+          postsList.appendChild(postCard);
+        }
+      });
+    }
+
+    // Rendre le détail d'un post
+    function renderPostDetail(post) {
+      const postContent = document.getElementById('post-content');
+      postContent.innerHTML = `
+        <article class="post-full">
+          <header class="post-header">
+            <h1>${post.title}</h1>
+            <div class="post-meta">
+              <span class="author">Par ${post.author}</span>
+              <span class="date">Le ${formatDate(post.date)}</span>
+              <span class="views">👁 ${post.views} vues</span>
+            </div>
+          </header>
+
+          <div class="post-content">
+            ${post.content.replace(/\n/g, '<br>')}
+          </div>
+        </article>
+
+        <section class="replies-section">
+          <div class="replies-header">
+            <h2>Réponses (${post.replies ? post.replies.length : 0})</h2>
+            <button class="btn btn-primary" onclick="showReplyModal(${post.id})">Répondre</button>
+          </div>
+
+          <div class="replies-list">
+            ${post.replies && post.replies.length > 0 ?
+              post.replies.filter(reply => reply.status === 'Validé').map(reply => `
+                <div class="reply">
+                  <div class="reply-header">
+                    <span class="author">${reply.author}</span>
+                    <span class="date">${formatDate(reply.date)}</span>
+                  </div>
+                  <div class="reply-content">
+                    ${reply.content.replace(/\n/g, '<br>')}
+                  </div>
+                </div>
+              `).join('') :
+              '<p style="text-align: center; color: var(--muted);">Aucune réponse pour le moment.</p>'
+            }
+          </div>
+        </section>
+      `;
+    }
+
+    // Formater la date
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
+    // Modal créer un post
+    function showCreatePostModal() {
+      document.getElementById('create-post-modal').classList.add('show');
+    }
+
+    function closeCreatePostModal() {
+      document.getElementById('create-post-modal').classList.remove('show');
+    }
+
+    // Modal répondre
+    function showReplyModal(postId) {
+      document.getElementById('reply-post-id').value = postId;
+      document.getElementById('reply-modal').classList.add('show');
+    }
+
+    function closeReplyModal() {
+      document.getElementById('reply-modal').classList.remove('show');
+    }
+
+    // Soumettre un nouveau post
+    document.getElementById('create-post-modal-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const title = document.getElementById('modal-post-title').value.trim();
+      const author = document.getElementById('modal-post-author').value.trim();
+      const email = document.getElementById('modal-post-email').value.trim();
+      const content = document.getElementById('modal-post-content').value.trim();
+
+      if (!title || !author || !content) {
+        showAlert('Tous les champs obligatoires doivent être remplis.', 'error');
+        return;
+      }
+
+      const newPost = {
+        id: Date.now(),
+        title,
+        content,
+        author,
+        email: email || null,
+        date: new Date().toISOString().split('T')[0],
+        views: 0,
+        likes: 0,
+        status: 'Publié', // En production, ce serait 'En révision'
+        replies: []
+      };
+
+      posts.unshift(newPost);
+      saveData();
+      renderPosts();
+      closeCreatePostModal();
+      this.reset();
+      showAlert('Post créé avec succès !');
+    });
+
+    // Soumettre une réponse
+    document.getElementById('reply-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const postId = parseInt(document.getElementById('reply-post-id').value);
+      const author = document.getElementById('reply-author').value.trim();
+      const email = document.getElementById('reply-email').value.trim();
+      const content = document.getElementById('reply-content').value.trim();
+
+      if (!author || !content) {
+        showAlert('Tous les champs obligatoires doivent être remplis.', 'error');
+        return;
+      }
+
+      const post = posts.find(p => p.id === postId);
+      if (post) {
+        const newReply = {
+          id: Date.now(),
+          content,
+          author,
+          email: email || null,
+          date: new Date().toISOString().split('T')[0],
+          status: 'Validé' // En production, ce serait 'En attente'
+        };
+
+        if (!post.replies) post.replies = [];
+        post.replies.push(newReply);
+        saveData();
+        renderPostDetail(post);
+        closeReplyModal();
+        this.reset();
+        showAlert('Réponse ajoutée avec succès !');
+      }
+    });
+
+    // Fermer les modales en cliquant en dehors
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('show');
+      }
+    });
+
+    // Initialisation
+    loadData();
+    showHomePage();
+  </script>
+</body>
+</html>
