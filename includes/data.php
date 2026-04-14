@@ -119,6 +119,7 @@ $cityzen = [
         ['key' => 'transport', 'label' => 'Transports', 'url' => '#transports'],
         ['key' => 'waste', 'label' => 'Dechets', 'url' => '#dechets'],
         ['key' => 'citizens', 'label' => 'Citoyens', 'url' => '#citoyens'],
+        ['key' => 'gestion-forum', 'label' => 'Gestion Forum', 'url' => '/admin/gestion_forum.php'],
         ['key' => 'settings', 'label' => 'Parametres', 'url' => '#parametres'],
     ],
     'public_menu' => [
