@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Forum</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-darker: #0b1221;
+      --bg-light: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-soft: #e0f2fe;
+      --success: #16a34a;
+      --warning: #f97316;
+      --danger: #ef4444;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--bg-dark);
+      color: #f8fafc;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .brand {
+      font-size: 1.3rem;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      color: #e2e8f0;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+
+    .nav-link.active,
+    .nav-link:hover {
+      background: rgba(45, 96, 255, 0.16);
+      color: #ffffff;
+    }
+
+    .sidebar small {
+      color: #94a3b8;
+    }
+
+    .content {
+      padding: 28px 32px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      gap: 18px;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .title-group h1 {
+      font-size: 2rem;
+      margin: 0;
+    }
+
+    .title-group p {
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .button-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.2s ease;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .button-primary:hover {
+      filter: brightness(1.05);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+    }
+
+    .card span {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .card h2 {
+      font-size: 2rem;
+      margin: 16px 0 6px;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .section {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 28px;
+    }
+
+    .section + .section {
+      margin-top: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .section-header h2 {
+      font-size: 1.2rem;
+      margin: 0;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    thead {
+      background: #f8fafc;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td {
+      color: #334155;
+      font-size: 0.96rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-warning { background: #ffedd5; color: #b45309; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
+
+    .note {
+      display: flex;
+      align-items: items-start;
+      gap: 16px;
+      padding: 18px 22px;
+      margin-top: 26px;
+      border-radius: 20px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0c4a6e;
+    }
+
+    .note strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { flex-direction: row; flex-wrap: wrap; gap: 16px; padding: 20px; }
+      .cards { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: stretch; }
+    }
+
+    /* Styles pour les modales */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 0;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      animation: modalFadeIn 0.3s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .close {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover {
+      color: var(--text);
+    }
+
+    .form-group {
+      padding: 20px 28px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .form-group:last-child {
+      border-bottom: none;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.96rem;
+      background: #ffffff;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 24px 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    .button-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: var(--text);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s ease;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .button-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Styles pour les boutons d'actions dans les tableaux */
+    .button-edit,
+    .button-delete {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-right: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .button-edit {
+      background: #e0f2fe;
+      color: #1d4ed8;
+    }
+
+    .button-edit:hover {
+      background: #bae6fd;
+    }
+
+    .button-delete {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .button-delete:hover {
+      background: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div>
+        <div class="brand">MediConnect Pro</div>
+        <p>Administration</p>
+      </div>
+      <div>
+        <a class="nav-link active" href="#">Dashboard</a>
+        <a class="nav-link" href="#">Signalements</a>
+        <a class="nav-link" href="#">Projets</a>
+        <a class="nav-link" href="#">Paramètres</a>
+      </div>
+      <div>
+        <button class="button-primary" style="width:100%;">Nouveau Dossier</button>
+        <p style="margin-top: 18px; color: #94a3b8;">Aide</p>
+        <p style="color: #94a3b8;">Déconnexion</p>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div class="title-group">
+          <h1>Gestion du Forum</h1>
+          <p>Tableau de bord de gestion des posts et des réponses.</p>
+        </div>
+        <a class="button-primary" href="#">Nouveau Post</a>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <span style="background: #e0f2fe; color: #1d4ed8;">TOTAL POSTS</span>
+          <h2>312</h2>
+          <p>Nombre total de publications dans la section forum.</p>
+        </div>
+        <div class="card">
+          <span style="background: #ddf7e7; color: #15803d;">NOUVELLES</span>
+          <h2>48</h2>
+          <p>Posts créés cette semaine par les utilisateurs.</p>
+        </div>
+        <div class="card">
+          <span style="background: #fee2e2; color: #b91c1c;">EN ATTENTE</span>
+          <h2>9</h2>
+          <p>Réponses nécessitant validation par un modérateur.</p>
+        </div>
+      </div>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>Posts</h2>
+          <div style="display: flex; gap: 12px;">
+            <span class="badge badge-success">Actifs</span>
+            <button class="button-primary" onclick="openPostModal()">Ajouter Post</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="postsTable">
+            <thead>
+              <tr>
+                <th>Titre</th>
+                <th>Auteur</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>Replies</h2>
+          <div style="display: flex; gap: 12px;">
+            <span class="badge badge-warning">À vérifier</span>
+            <button class="button-primary" onclick="openReplyModal()">Ajouter Reply</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="repliesTable">
+            <thead>
+              <tr>
+                <th>Post associé</th>
+                <th>Répondeur</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+        <div class="note">
+          <div>
+            <strong>Note :</strong>
+            Respecte le modèle MVC et utilise PDO pour la gestion de la base de données.
+          </div>
+        </div>
+      </section>
+
+      <!-- Modal pour les Posts -->
+      <div id="postModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="postModalTitle">Ajouter un Post</h3>
+            <span class="close" onclick="closePostModal()">&times;</span>
+          </div>
+          <form id="postForm">
+            <input type="hidden" id="postId" value="">
+            <div class="form-group">
+              <label for="postTitle">Titre</label>
+              <input type="text" id="postTitle" required>
+            </div>
+            <div class="form-group">
+              <label for="postAuthor">Auteur</label>
+              <input type="text" id="postAuthor" required>
+            </div>
+            <div class="form-group">
+              <label for="postStatus">Statut</label>
+              <select id="postStatus" required>
+                <option value="Publié">Publié</option>
+                <option value="En révision">En révision</option>
+                <option value="Brouillon">Brouillon</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="button-secondary" onclick="closePostModal()">Annuler</button>
+              <button type="submit" class="button-primary">Enregistrer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal pour les Replies -->
+      <div id="replyModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="replyModalTitle">Ajouter une Reply</h3>
+            <span class="close" onclick="closeReplyModal()">&times;</span>
+          </div>
+          <form id="replyForm">
+            <input type="hidden" id="replyId" value="">
+            <div class="form-group">
+              <label for="replyPost">Post associé</label>
+              <select id="replyPost" required>
+                <!-- Les options seront remplies dynamiquement -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="replyAuthor">Répondeur</label>
+              <input type="text" id="replyAuthor" required>
+            </div>
+            <div class="form-group">
+              <label for="replyStatus">Statut</label>
+              <select id="replyStatus" required>
+                <option value="Validé">Validé</option>
+                <option value="Rejeté">Rejeté</option>
+                <option value="En attente">En attente</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="button-secondary" onclick="closeReplyModal()">Annuler</button>
+              <button type="submit" class="button-primary">Enregistrer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Données initiales
+    let posts = [
+      { id: 1, title: "Présentation de la nouvelle fonctionnalité", author: "Amine B.", date: "12 avr. 2026", status: "Publié" },
+      { id: 2, title: "Question sur l'intégration PDO", author: "Lea M.", date: "11 avr. 2026", status: "En révision" },
+      { id: 3, title: "Problème avec les formulaires", author: "Sofia R.", date: "10 avr. 2026", status: "Publié" }
+    ];
+
+    let replies = [
+      { id: 1, postTitle: "Question sur l'intégration PDO", author: "Marc L.", date: "12 avr. 2026", status: "Validé" },
+      { id: 2, postTitle: "Problème avec les formulaires", author: "Yasmine F.", date: "11 avr. 2026", status: "Rejeté" },
+      { id: 3, postTitle: "Présentation de la nouvelle fonctionnalité", author: "Oumeima I.", date: "10 avr. 2026", status: "En attente" }
+    ];
+
+    // Charger les données depuis localStorage
+    function loadData() {
+      const savedPosts = localStorage.getItem('posts');
+      const savedReplies = localStorage.getItem('replies');
+      if (savedPosts) posts = JSON.parse(savedPosts);
+      if (savedReplies) replies = JSON.parse(savedReplies);
+    }
+
+    // Sauvegarder les données dans localStorage
+    function saveData() {
+      localStorage.setItem('posts', JSON.stringify(posts));
+      localStorage.setItem('replies', JSON.stringify(replies));
+    }
+
+    // Afficher les posts
+    function renderPosts() {
+      const tbody = document.querySelector('#postsTable tbody');
+      tbody.innerHTML = '';
+      posts.forEach(post => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${post.title}</td>
+          <td>${post.author}</td>
+          <td>${post.date}</td>
+          <td><span class="badge badge-${getStatusClass(post.status)}">${post.status}</span></td>
+          <td>
+            <button class="button-edit" onclick="editPost(${post.id})">Modifier</button>
+            <button class="button-delete" onclick="deletePost(${post.id})">Supprimer</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      updatePostSelect();
+      updateStats();
+    }
+
+    // Afficher les replies
+    function renderReplies() {
+      const tbody = document.querySelector('#repliesTable tbody');
+      tbody.innerHTML = '';
+      replies.forEach(reply => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${reply.postTitle}</td>
+          <td>${reply.author}</td>
+          <td>${reply.date}</td>
+          <td><span class="badge badge-${getStatusClass(reply.status)}">${reply.status}</span></td>
+          <td>
+            <button class="button-edit" onclick="editReply(${reply.id})">Modifier</button>
+            <button class="button-delete" onclick="deleteReply(${reply.id})">Supprimer</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      updateStats();
+    }
+
+    // Obtenir la classe CSS pour le statut
+    function getStatusClass(status) {
+      switch(status) {
+        case 'Publié':
+        case 'Validé': return 'success';
+        case 'En révision':
+        case 'En attente': return 'warning';
+        case 'Rejeté': return 'danger';
+        default: return 'success';
+      }
+    }
+
+    // Mettre à jour les statistiques
+    function updateStats() {
+      document.querySelector('.cards .card:nth-child(1) h2').textContent = posts.length;
+      document.querySelector('.cards .card:nth-child(2) h2').textContent = posts.filter(p => new Date(p.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
+      document.querySelector('.cards .card:nth-child(3) h2').textContent = replies.filter(r => r.status === 'En attente').length;
+    }
+
+    // Mettre à jour le select des posts pour les replies
+    function updatePostSelect() {
+      const select = document.getElementById('replyPost');
+      select.innerHTML = '';
+      posts.forEach(post => {
+        const option = document.createElement('option');
+        option.value = post.title;
+        option.textContent = post.title;
+        select.appendChild(option);
+      });
+    }
+
+    // Ouvrir la modal des posts
+    function openPostModal(postId = null) {
+      const modal = document.getElementById('postModal');
+      const form = document.getElementById('postForm');
+      const title = document.getElementById('postModalTitle');
+
+      if (postId) {
+        const post = posts.find(p => p.id === postId);
+        document.getElementById('postId').value = post.id;
+        document.getElementById('postTitle').value = post.title;
+        document.getElementById('postAuthor').value = post.author;
+        document.getElementById('postStatus').value = post.status;
+        title.textContent = 'Modifier un Post';
+      } else {
+        form.reset();
+        document.getElementById('postId').value = '';
+        title.textContent = 'Ajouter un Post';
+      }
+
+      modal.style.display = 'block';
+    }
+
+    // Fermer la modal des posts
+    function closePostModal() {
+      document.getElementById('postModal').style.display = 'none';
+    }
+
+    // Ouvrir la modal des replies
+    function openReplyModal(replyId = null) {
+      const modal = document.getElementById('replyModal');
+      const form = document.getElementById('replyForm');
+      const title = document.getElementById('replyModalTitle');
+
+      if (replyId) {
+        const reply = replies.find(r => r.id === replyId);
+        document.getElementById('replyId').value = reply.id;
+        document.getElementById('replyPost').value = reply.postTitle;
+        document.getElementById('replyAuthor').value = reply.author;
+        document.getElementById('replyStatus').value = reply.status;
+        title.textContent = 'Modifier une Reply';
+      } else {
+        form.reset();
+        document.getElementById('replyId').value = '';
+        title.textContent = 'Ajouter une Reply';
+      }
+
+      modal.style.display = 'block';
+    }
+
+    // Fermer la modal des replies
+    function closeReplyModal() {
+      document.getElementById('replyModal').style.display = 'none';
+    }
+
+    // Soumettre le formulaire des posts
+    document.getElementById('postForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('postId').value;
+      const title = document.getElementById('postTitle').value;
+      const author = document.getElementById('postAuthor').value;
+      const status = document.getElementById('postStatus').value;
+
+      if (id) {
+        // Modifier
+        const post = posts.find(p => p.id == id);
+        post.title = title;
+        post.author = author;
+        post.status = status;
+      } else {
+        // Ajouter
+        const newPost = {
+          id: Date.now(),
+          title,
+          author,
+          date: new Date().toLocaleDateString('fr-FR'),
+          status
+        };
+        posts.push(newPost);
+      }
+
+      saveData();
+      renderPosts();
+      closePostModal();
+    });
+
+    // Soumettre le formulaire des replies
+    document.getElementById('replyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('replyId').value;
+      const postTitle = document.getElementById('replyPost').value;
+      const author = document.getElementById('replyAuthor').value;
+      const status = document.getElementById('replyStatus').value;
+
+      if (id) {
+        // Modifier
+        const reply = replies.find(r => r.id == id);
+        reply.postTitle = postTitle;
+        reply.author = author;
+        reply.status = status;
+      } else {
+        // Ajouter
+        const newReply = {
+          id: Date.now(),
+          postTitle,
+          author,
+          date: new Date().toLocaleDateString('fr-FR'),
+          status
+        };
+        replies.push(newReply);
+      }
+
+      saveData();
+      renderReplies();
+      closeReplyModal();
+    });
+
+    // Modifier un post
+    function editPost(id) {
+      openPostModal(id);
+    }
+
+    // Supprimer un post
+    function deletePost(id) {
+      if (confirm('Êtes-vous sûr de vouloir supprimer ce post ?')) {
+        posts = posts.filter(p => p.id !== id);
+        // Supprimer aussi les replies associées
+        replies = replies.filter(r => r.postTitle !== posts.find(p => p.id === id)?.title);
+        saveData();
+        renderPosts();
+        renderReplies();
+      }
+    }
+
+    // Modifier une reply
+    function editReply(id) {
+      openReplyModal(id);
+    }
+
+    // Supprimer une reply
+    function deleteReply(id) {
+      if (confirm('Êtes-vous sûr de vouloir supprimer cette reply ?')) {
+        replies = replies.filter(r => r.id !== id);
+        saveData();
+        renderReplies();
+      }
+    }
+
+    // Fermer les modales en cliquant en dehors
+    window.onclick = function(event) {
+      const postModal = document.getElementById('postModal');
+      const replyModal = document.getElementById('replyModal');
+      if (event.target === postModal) {
+        closePostModal();
+      }
+      if (event.target === replyModal) {
+        closeReplyModal();
+      }
+    }
+
+    // Initialisation
+    loadData();
+    renderPosts();
+    renderReplies();
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Forum</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-darker: #0b1221;
+      --bg-light: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-soft: #e0f2fe;
+      --success: #16a34a;
+      --warning: #f97316;
+      --danger: #ef4444;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--bg-dark);
+      color: #f8fafc;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .brand {
+      font-size: 1.3rem;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      color: #e2e8f0;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+
+    .nav-link.active,
+    .nav-link:hover {
+      background: rgba(45, 96, 255, 0.16);
+      color: #ffffff;
+    }
+
+    .sidebar small {
+      color: #94a3b8;
+    }
+
+    .content {
+      padding: 28px 32px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      gap: 18px;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .title-group h1 {
+      font-size: 2rem;
+      margin: 0;
+    }
+
+    .title-group p {
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .button-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.2s ease;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .button-primary:hover {
+      filter: brightness(1.05);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+    }
+
+    .card span {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .card h2 {
+      font-size: 2rem;
+      margin: 16px 0 6px;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .section {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 28px;
+    }
+
+    .section + .section {
+      margin-top: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .section-header h2 {
+      font-size: 1.2rem;
+      margin: 0;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    thead {
+      background: #f8fafc;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td {
+      color: #334155;
+      font-size: 0.96rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-warning { background: #ffedd5; color: #b45309; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
+
+    .note {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 22px;
+      margin-top: 26px;
+      border-radius: 20px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0c4a6e;
+    }
+
+    .note strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { flex-direction: row; flex-wrap: wrap; gap: 16px; padding: 20px; }
+      .cards { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: stretch; }
+    }
+
+    /* Styles pour les modales */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 0;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      animation: modalFadeIn 0.3s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .close {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover {
+      color: var(--text);
+    }
+
+    .form-group {
+      padding: 20px 28px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .form-group:last-child {
+      border-bottom: none;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.96rem;
+      background: #ffffff;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 24px 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    .button-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: var(--text);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s ease;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .button-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Styles pour les boutons d'actions dans les tableaux */
+    .button-edit,
+    .button-delete {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-right: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .button-edit {
+      background: #e0f2fe;
+      color: #1d4ed8;
+    }
+
+    .button-edit:hover {
+      background: #bae6fd;
+    }
+
+    .button-delete {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .button-delete:hover {
+      background: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div>
+        <div class="brand">MediConnect Pro</div>
+        <p>Administration</p>
+      </div>
+      <div>
+        <a class="nav-link active" href="#">Dashboard</a>
+        <a class="nav-link" href="#">Signalements</a>
+        <a class="nav-link" href="#">Projets</a>
+        <a class="nav-link" href="#">Paramètres</a>
+      </div>
+      <div>
+        <button class="button-primary" style="width:100%;">Nouveau Dossier</button>
+        <p style="margin-top: 18px; color: #94a3b8;">Aide</p>
+        <p style="color: #94a3b8;">Déconnexion</p>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div class="title-group">
+          <h1>Gestion du Forum</h1>
+          <p>Tableau de bord de gestion des posts et des réponses.</p>
+        </div>
+        <a class="button-primary" href="#">Nouveau Post</a>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <span style="background: #e0f2fe; color: #1d4ed8;">TOTAL POSTS</span>
+          <h2>312</h2>
+          <p>Nombre total de publications dans la section forum.</p>
+        </div>
+        <div class="card">
+          <span style="background: #ddf7e7; color: #15803d;">NOUVELLES</span>
+          <h2>48</h2>
+          <p>Posts créés cette semaine par les utilisateurs.</p>
+        </div>
+        <div class="card">
+          <span style="background: #fee2e2; color: #b91c1c;">EN ATTENTE</span>
+          <h2>9</h2>
+          <p>Réponses nécessitant validation par un modérateur.</p>
+        </div>
+      </div>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>Posts</h2>
+          <div style="display: flex; gap: 12px;">
+            <span class="badge badge-success">Actifs</span>
+            <button class="button-primary" onclick="openPostModal()">Ajouter Post</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="postsTable">
+            <thead>
+              <tr>
+                <th>Titre</th>
+                <th>Auteur</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>Replies</h2>
+          <div style="display: flex; gap: 12px;">
+            <span class="badge badge-warning">À vérifier</span>
+            <button class="button-primary" onclick="openReplyModal()">Ajouter Reply</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="repliesTable">
+            <thead>
+              <tr>
+                <th>Post associé</th>
+                <th>Répondeur</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+        <div class="note">
+          <div>
+            <strong>Note :</strong>
+            Respecte le modèle MVC et utilise PDO pour la gestion de la base de données.
+          </div>
+        </div>
+      </section>
+
+      <!-- Modal pour les Posts -->
+      <div id="postModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="postModalTitle">Ajouter un Post</h3>
+            <span class="close" onclick="closePostModal()">&times;</span>
+          </div>
+          <form id="postForm">
+            <input type="hidden" id="postId" value="">
+            <div class="form-group">
+              <label for="postTitle">Titre</label>
+              <input type="text" id="postTitle" required>
+            </div>
+            <div class="form-group">
+              <label for="postAuthor">Auteur</label>
+              <input type="text" id="postAuthor" required>
+            </div>
+            <div class="form-group">
+              <label for="postStatus">Statut</label>
+              <select id="postStatus" required>
+                <option value="Publié">Publié</option>
+                <option value="En révision">En révision</option>
+                <option value="Brouillon">Brouillon</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="button-secondary" onclick="closePostModal()">Annuler</button>
+              <button type="submit" class="button-primary">Enregistrer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal pour les Replies -->
+      <div id="replyModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="replyModalTitle">Ajouter une Reply</h3>
+            <span class="close" onclick="closeReplyModal()">&times;</span>
+          </div>
+          <form id="replyForm">
+            <input type="hidden" id="replyId" value="">
+            <div class="form-group">
+              <label for="replyPost">Post associé</label>
+              <select id="replyPost" required>
+                <!-- Les options seront remplies dynamiquement -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="replyAuthor">Répondeur</label>
+              <input type="text" id="replyAuthor" required>
+            </div>
+            <div class="form-group">
+              <label for="replyStatus">Statut</label>
+              <select id="replyStatus" required>
+                <option value="Validé">Validé</option>
+                <option value="Rejeté">Rejeté</option>
+                <option value="En attente">En attente</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="button-secondary" onclick="closeReplyModal()">Annuler</button>
+              <button type="submit" class="button-primary">Enregistrer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Données initiales
+    let posts = [
+      { id: 1, title: "Présentation de la nouvelle fonctionnalité", author: "Amine B.", date: "12 avr. 2026", status: "Publié" },
+      { id: 2, title: "Question sur l'intégration PDO", author: "Lea M.", date: "11 avr. 2026", status: "En révision" },
+      { id: 3, title: "Problème avec les formulaires", author: "Sofia R.", date: "10 avr. 2026", status: "Publié" }
+    ];
+
+    let replies = [
+      { id: 1, postTitle: "Question sur l'intégration PDO", author: "Marc L.", date: "12 avr. 2026", status: "Validé" },
+      { id: 2, postTitle: "Problème avec les formulaires", author: "Yasmine F.", date: "11 avr. 2026", status: "Rejeté" },
+      { id: 3, postTitle: "Présentation de la nouvelle fonctionnalité", author: "Oumeima I.", date: "10 avr. 2026", status: "En attente" }
+    ];
+
+    // Charger les données depuis localStorage
+    function loadData() {
+      const savedPosts = localStorage.getItem('posts');
+      const savedReplies = localStorage.getItem('replies');
+      if (savedPosts) posts = JSON.parse(savedPosts);
+      if (savedReplies) replies = JSON.parse(savedReplies);
+    }
+
+    // Sauvegarder les données dans localStorage
+    function saveData() {
+      localStorage.setItem('posts', JSON.stringify(posts));
+      localStorage.setItem('replies', JSON.stringify(replies));
+    }
+
+    // Afficher les posts
+    function renderPosts() {
+      const tbody = document.querySelector('#postsTable tbody');
+      tbody.innerHTML = '';
+      posts.forEach(post => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${post.title}</td>
+          <td>${post.author}</td>
+          <td>${post.date}</td>
+          <td><span class="badge badge-${getStatusClass(post.status)}">${post.status}</span></td>
+          <td>
+            <button class="button-edit" onclick="editPost(${post.id})">Modifier</button>
+            <button class="button-delete" onclick="deletePost(${post.id})">Supprimer</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      updatePostSelect();
+      updateStats();
+    }
+
+    // Afficher les replies
+    function renderReplies() {
+      const tbody = document.querySelector('#repliesTable tbody');
+      tbody.innerHTML = '';
+      replies.forEach(reply => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${reply.postTitle}</td>
+          <td>${reply.author}</td>
+          <td>${reply.date}</td>
+          <td><span class="badge badge-${getStatusClass(reply.status)}">${reply.status}</span></td>
+          <td>
+            <button class="button-edit" onclick="editReply(${reply.id})">Modifier</button>
+            <button class="button-delete" onclick="deleteReply(${reply.id})">Supprimer</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      updateStats();
+    }
+
+    // Obtenir la classe CSS pour le statut
+    function getStatusClass(status) {
+      switch(status) {
+        case 'Publié':
+        case 'Validé': return 'success';
+        case 'En révision':
+        case 'En attente': return 'warning';
+        case 'Rejeté': return 'danger';
+        default: return 'success';
+      }
+    }
+
+    // Mettre à jour les statistiques
+    function updateStats() {
+      document.querySelector('.cards .card:nth-child(1) h2').textContent = posts.length;
+      document.querySelector('.cards .card:nth-child(2) h2').textContent = posts.filter(p => new Date(p.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
+      document.querySelector('.cards .card:nth-child(3) h2').textContent = replies.filter(r => r.status === 'En attente').length;
+    }
+
+    // Mettre à jour le select des posts pour les replies
+    function updatePostSelect() {
+      const select = document.getElementById('replyPost');
+      select.innerHTML = '';
+      posts.forEach(post => {
+        const option = document.createElement('option');
+        option.value = post.title;
+        option.textContent = post.title;
+        select.appendChild(option);
+      });
+    }
+
+    // Ouvrir la modal des posts
+    function openPostModal(postId = null) {
+      const modal = document.getElementById('postModal');
+      const form = document.getElementById('postForm');
+      const title = document.getElementById('postModalTitle');
+
+      if (postId) {
+        const post = posts.find(p => p.id === postId);
+        document.getElementById('postId').value = post.id;
+        document.getElementById('postTitle').value = post.title;
+        document.getElementById('postAuthor').value = post.author;
+        document.getElementById('postStatus').value = post.status;
+        title.textContent = 'Modifier un Post';
+      } else {
+        form.reset();
+        document.getElementById('postId').value = '';
+        title.textContent = 'Ajouter un Post';
+      }
+
+      modal.style.display = 'block';
+    }
+
+    // Fermer la modal des posts
+    function closePostModal() {
+      document.getElementById('postModal').style.display = 'none';
+    }
+
+    // Ouvrir la modal des replies
+    function openReplyModal(replyId = null) {
+      const modal = document.getElementById('replyModal');
+      const form = document.getElementById('replyForm');
+      const title = document.getElementById('replyModalTitle');
+
+      if (replyId) {
+        const reply = replies.find(r => r.id === replyId);
+        document.getElementById('replyId').value = reply.id;
+        document.getElementById('replyPost').value = reply.postTitle;
+        document.getElementById('replyAuthor').value = reply.author;
+        document.getElementById('replyStatus').value = reply.status;
+        title.textContent = 'Modifier une Reply';
+      } else {
+        form.reset();
+        document.getElementById('replyId').value = '';
+        title.textContent = 'Ajouter une Reply';
+      }
+
+      modal.style.display = 'block';
+    }
+
+    // Fermer la modal des replies
+    function closeReplyModal() {
+      document.getElementById('replyModal').style.display = 'none';
+    }
+
+    // Soumettre le formulaire des posts
+    document.getElementById('postForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('postId').value;
+      const title = document.getElementById('postTitle').value;
+      const author = document.getElementById('postAuthor').value;
+      const status = document.getElementById('postStatus').value;
+
+      if (id) {
+        // Modifier
+        const post = posts.find(p => p.id == id);
+        post.title = title;
+        post.author = author;
+        post.status = status;
+      } else {
+        // Ajouter
+        const newPost = {
+          id: Date.now(),
+          title,
+          author,
+          date: new Date().toLocaleDateString('fr-FR'),
+          status
+        };
+        posts.push(newPost);
+      }
+
+      saveData();
+      renderPosts();
+      closePostModal();
+    });
+
+    // Soumettre le formulaire des replies
+    document.getElementById('replyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('replyId').value;
+      const postTitle = document.getElementById('replyPost').value;
+      const author = document.getElementById('replyAuthor').value;
+      const status = document.getElementById('replyStatus').value;
+
+      if (id) {
+        // Modifier
+        const reply = replies.find(r => r.id == id);
+        reply.postTitle = postTitle;
+        reply.author = author;
+        reply.status = status;
+      } else {
+        // Ajouter
+        const newReply = {
+          id: Date.now(),
+          postTitle,
+          author,
+          date: new Date().toLocaleDateString('fr-FR-FR'),
+          status
+        };
+        replies.push(newReply);
+      }
+
+      saveData();
+      renderReplies();
+      closeReplyModal();
+    });
+
+    // Modifier un post
+    function editPost(id) {
+      openPostModal(id);
+    }
+
+    // Supprimer un post
+    function deletePost(id) {
+      if (confirm('Êtes-vous sûr de vouloir supprimer ce post ?')) {
+        posts = posts.filter(p => p.id !== id);
+        // Supprimer aussi les replies associées
+        replies = replies.filter(r => r.postTitle !== posts.find(p => p.id === id)?.title);
+        saveData();
+        renderPosts();
+        renderReplies();
+      }
+    }
+
+    // Modifier une reply
+    function editReply(id) {
+      openReplyModal(id);
+    }
+
+    // Supprimer une reply
+    function deleteReply(id) {
+      if (confirm('Êtes-vous sûr de vouloir supprimer cette reply ?')) {
+        replies = replies.filter(r => r.id !== id);
+        saveData();
+        renderReplies();
+      }
+    }
+
+    // Fermer les modales en cliquant en dehors
+    window.onclick = function(event) {
+      const postModal = document.getElementById('postModal');
+      const replyModal = document.getElementById('replyModal');
+      if (event.target === postModal) {
+        closePostModal();
+      }
+      if (event.target === replyModal) {
+        closeReplyModal();
+      }
+    }
+
+    // Initialisation
+    loadData();
+    renderPosts();
+    renderReplies();
+  </script>
