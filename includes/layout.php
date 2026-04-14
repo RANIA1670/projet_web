@@ -7,7 +7,7 @@ function cityzen_base_path(): string
     $script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     $lastSegment = basename($script);
 
-    if (in_array($lastSegment, ['admin', 'api', 'includes', 'equipment'], true)) {
+    if (in_array($lastSegment, ['admin', 'api', 'includes', 'equipment', 'forum'], true)) {
         $script = dirname($script);
     }
 
