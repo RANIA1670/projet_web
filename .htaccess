@@ -1,0 +1,6 @@
+Options -Indexes
+RewriteEngine On
+
+# Redirect to public folder if accessed from root
+RewriteCond %{REQUEST_URI} !^/projet_web/public/
+RewriteRule ^(.*)$ public/$1 [L]

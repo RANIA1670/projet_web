@@ -1,0 +1,11 @@
+AddDefaultCharset UTF-8
+Options -Indexes
+RewriteEngine On
+RewriteBase /projet_web/public/
+
+# Allow real files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything through index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
