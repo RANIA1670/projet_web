@@ -15,7 +15,7 @@ function cityzen_db(): PDO
     }
 
     $host = getenv('CITYZEN_DB_HOST') ?: '127.0.0.1';
-    $name = getenv('CITYZEN_DB_NAME') ?: 'cityzen';
+    $name = getenv('CITYZEN_DB_NAME') ?: 'projet';
     $user = getenv('CITYZEN_DB_USER') ?: 'root';
     $dbPass = getenv('CITYZEN_DB_PASS');
     $pass = $dbPass === false ? '' : (string) $dbPass;
@@ -92,8 +92,16 @@ function cityzen_db_ensure_schema(PDO $pdo): void
         $pdo->exec('ALTER TABLE users ADD COLUMN profile_photo VARCHAR(255) NULL AFTER phone');
     }
 
+    if (!cityzen_db_column_exists($pdo, 'users', 'qr_token')) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN qr_token CHAR(64) NULL AFTER profile_photo');
+    }
+
     if (!cityzen_db_index_exists($pdo, 'users', 'uq_users_email')) {
         $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uq_users_email (email)');
+    }
+
+    if (!cityzen_db_index_exists($pdo, 'users', 'uq_users_qr_token')) {
+        $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uq_users_qr_token (qr_token)');
     }
 }
 
@@ -176,5 +184,96 @@ function cityzen_db_import_users_from_json(PDO $pdo, array $users): void
 
     if ($maxId > 0) {
         $pdo->exec('ALTER TABLE users AUTO_INCREMENT = ' . ($maxId + 1));
+    }
+}
+
+function cityzen_register_user_with_email(string $email, string $password, string $fullName): array
+{
+    if ($email === '' || $password === '' || $fullName === '') {
+        return ['ok' => false, 'error' => 'Email, mot de passe et nom complet requis.'];
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['ok' => false, 'error' => 'Format d\'email invalide.'];
+    }
+
+    if (strlen($password) < 8) {
+        return ['ok' => false, 'error' => 'Le mot de passe doit avoir au moins 8 caracteres.'];
+    }
+
+    try {
+        $pdo = cityzen_db();
+
+        // Check if email already exists
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        if ($stmt->fetch() !== false) {
+            return ['ok' => false, 'error' => 'Cet email est deja utilise.'];
+        }
+
+        // Generate username from email
+        $username = explode('@', $email)[0];
+        $baseUsername = $username;
+        $counter = 1;
+
+        // Check if username exists and make it unique
+        while (true) {
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
+            $stmt->execute([$username]);
+            if ($stmt->fetch() === false) {
+                break;
+            }
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+
+        // Hash the password
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
+        // Insert the new user
+        $stmt = $pdo->prepare(
+            'INSERT INTO users (username, email, full_name, password_hash, role, blocked, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+        );
+        $stmt->execute([$username, $email, $fullName, $hash, 'user']);
+
+        // Fetch and return the new user data
+        $stmt = $pdo->prepare(
+            'SELECT id, username, full_name, email, birth_date, postal_code, city, phone, profile_photo, password_hash, role, blocked, created_at, updated_at FROM users WHERE email = ? LIMIT 1'
+        );
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if (is_array($user)) {
+            return ['ok' => true, 'user' => $user];
+        }
+
+        return ['ok' => false, 'error' => 'Erreur lors de la creation du compte.'];
+    } catch (PDOException $e) {
+        return ['ok' => false, 'error' => 'Erreur base de donnees : ' . $e->getMessage()];
+    } catch (Exception $e) {
+        return ['ok' => false, 'error' => 'Erreur : ' . $e->getMessage()];
+    }
+}
+
+function cityzen_user_stats(): array
+{
+    try {
+        $pdo = cityzen_db();
+        $row = $pdo->query(
+            "SELECT COUNT(*) AS total,
+                    SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) AS admins,
+                    SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) AS users_count,
+                    SUM(CASE WHEN blocked = 1 THEN 1 ELSE 0 END) AS blocked_count
+             FROM users"
+        )->fetch();
+
+        return [
+            'total' => (int) ($row['total'] ?? 0),
+            'admins' => (int) ($row['admins'] ?? 0),
+            'users' => (int) ($row['users_count'] ?? 0),
+            'blocked' => (int) ($row['blocked_count'] ?? 0),
+        ];
+    } catch (Throwable) {
+        return ['total' => 0, 'admins' => 0, 'users' => 0, 'blocked' => 0];
     }
 }

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   city VARCHAR(120) NULL,
   phone VARCHAR(30) NULL,
   profile_photo VARCHAR(255) NULL,
+  qr_token CHAR(64) NULL,
   password_hash VARCHAR(255) NOT NULL COMMENT 'Hash PHP password_hash',
   role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
   blocked TINYINT(1) NOT NULL DEFAULT 0,
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_username (username),
   UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_qr_token (qr_token),
   KEY idx_users_role (role),
   KEY idx_users_blocked (blocked)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

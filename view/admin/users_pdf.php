@@ -1,22 +1,6 @@
 <?php
 
 declare(strict_types=1);
-
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/data.php';
-
-cityzen_require_agent();
-
-$q = trim((string) ($_GET['q'] ?? ''));
-$sort = (string) ($_GET['sort'] ?? 'id');
-$dir = strtoupper((string) ($_GET['dir'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
-
-$rows = cityzen_users_export_rows($q, $sort, $dir, 500);
-$app = (string) ($cityzen['app_name'] ?? 'CityZen');
-$city = (string) ($cityzen['city_name'] ?? '');
-$exportedAt = date('d/m/Y H:i');
-
-header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -45,7 +29,7 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
   <h1>Liste des utilisateurs</h1>
-  <p class="meta"><?= htmlspecialchars($app) ?><?= $city !== '' ? ' — ' . htmlspecialchars($city) : '' ?> — genere le <?= htmlspecialchars($exportedAt) ?> — <?= count($rows) ?> ligne(s) (max 500)</p>
+  <p class="meta"><?= htmlspecialchars($app) ?><?= $city !== '' ? ' - ' . htmlspecialchars($city) : '' ?> - genere le <?= htmlspecialchars($exportedAt) ?> - <?= count($rows) ?> ligne(s) (max 500)</p>
   <div class="toolbar">
     <button type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
   </div>

@@ -2,41 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/layout.php';
-
-$error = '';
-$next = cityzen_safe_next((string) ($_GET['next'] ?? ''));
-
-if (cityzen_is_logged_in()) {
-    if (cityzen_is_agent()) {
-        header('Location: ' . cityzen_asset('admin/dashboard.php'), true, 302);
-    } else {
-        header('Location: ' . cityzen_asset('index.php'), true, 302);
-    }
-    exit;
-}
-
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
-    if (!cityzen_csrf_validate($_POST['csrf'] ?? null)) {
-        $error = 'Session expiree : rechargez la page puis reessayez.';
-    } else {
-        $user = trim((string) ($_POST['user'] ?? ''));
-        $pass = (string) ($_POST['pass'] ?? '');
-        $next = cityzen_safe_next((string) ($_POST['next'] ?? ''));
-
-        $auth = cityzen_authenticate_result($user, $pass);
-        if (($auth['ok'] ?? false) === true) {
-            $role = (string) ($_SESSION['cityzen_user']['role'] ?? 'user');
-            $target = cityzen_post_login_redirect($role, $next);
-            header('Location: ' . $target, true, 302);
-            exit;
-        }
-
-        $error = (string) ($auth['error'] ?? 'Identifiants incorrects.');
-    }
-}
-
 cityzen_render_head('Connexion');
+$errors = is_array($errors ?? null) ? $errors : [];
+$old = is_array($old ?? null) ? $old : [];
 ?>
 <div class="site-shell">
   <header class="topbar topbar-public">
@@ -59,20 +27,22 @@ cityzen_render_head('Connexion');
         <p class="login-error" role="alert"><?= htmlspecialchars($error) ?></p>
       <?php endif; ?>
 
-      <form class="login-form" method="post" action="">
+      <form class="login-form" method="post" action="" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(cityzen_csrf_token()) ?>">
         <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">
         <label class="login-field">
           <span>Email ou nom d'utilisateur</span>
-          <input type="text" name="user" autocomplete="username" required>
+          <input type="text" name="user" autocomplete="username" required value="<?= htmlspecialchars((string) ($old['user'] ?? '')) ?>">
+          <?php if (isset($errors['user'])): ?><small class="login-error" role="alert"><?= htmlspecialchars((string) $errors['user']) ?></small><?php endif; ?>
         </label>
         <label class="login-field">
           <span>Mot de passe</span>
           <input type="password" name="pass" autocomplete="current-password" required>
+          <?php if (isset($errors['pass'])): ?><small class="login-error" role="alert"><?= htmlspecialchars((string) $errors['pass']) ?></small><?php endif; ?>
         </label>
         <button type="submit" class="login-submit">Se connecter</button>
       </form>
-      <p class="login-footer-link"><a href="<?= htmlspecialchars(cityzen_asset('admin/forgot_password.php')) ?>">Mot de passe oublie ?</a></p>
+      <p class="login-footer-link"><a href="<?= htmlspecialchars(cityzen_asset('controller/forgot_password.php')) ?>">Mot de passe oublie ?</a></p>
 
       <p class="login-footer-link">Pas encore de compte ? <a href="<?= htmlspecialchars(cityzen_asset('register.php')) ?>">S'inscrire</a></p>
 
@@ -81,3 +51,4 @@ cityzen_render_head('Connexion');
   </main>
 </div>
 <?php cityzen_render_footer(); ?>
+

@@ -1,10 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../includes/layout.php';
-
-cityzen_require_agent();
-
-$userStats = cityzen_user_stats();
+declare(strict_types=1);
 
 cityzen_render_head('Tableau de bord');
 ?>
@@ -33,7 +29,7 @@ cityzen_render_head('Tableau de bord');
       <div class="admin-user">
         <span><?= htmlspecialchars($cityzen['current_date']) ?></span>
         <?php $avatarUrl = cityzen_user_avatar_url(); ?>
-        <a href="<?= htmlspecialchars(cityzen_asset('admin/settings.php')) ?>" aria-label="Ouvrir les parametres">
+        <a href="<?= htmlspecialchars(cityzen_asset('controller/settings.php')) ?>" aria-label="Ouvrir les parametres">
           <?php if ($avatarUrl !== null): ?>
             <img class="avatar avatar-link avatar-photo" src="<?= htmlspecialchars($avatarUrl) ?>" alt="Photo de profil">
           <?php else: ?>
@@ -46,7 +42,7 @@ cityzen_render_head('Tableau de bord');
     <section class="panel users-admin-section" id="utilisateurs">
       <h2>Comptes utilisateurs</h2>
       <p class="panel-lead">Gestion complete dans l&apos;espace dedie : liste, recherche, tri, pagination, modification, suppression et export PDF.</p>
-      <p><a class="users-admin-cta" href="<?= htmlspecialchars(cityzen_asset('admin/users.php')) ?>">Ouvrir la gestion des utilisateurs</a></p>
+      <p><a class="users-admin-cta" href="<?= htmlspecialchars(cityzen_asset('controller/users.php')) ?>">Ouvrir la gestion des utilisateurs</a></p>
     </section>
 
     <section class="admin-stats">

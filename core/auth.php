@@ -2,13 +2,54 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/users_store.php';
+require_once __DIR__ . '/../model/db.php';
+require_once __DIR__ . '/../model/users_store.php';
 
 function cityzen_session_start(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
+}
+
+function cityzen_find_user_by_login(?string $user): ?array
+{
+    if ($user === null || $user === '') {
+        return null;
+    }
+
+    try {
+        $pdo = cityzen_db();
+        $stmt = $pdo->prepare(
+            'SELECT id, username, full_name, email, birth_date, postal_code, city, phone, profile_photo, password_hash, role, blocked, created_at, updated_at FROM users WHERE username = ? OR email = ? LIMIT 1'
+        );
+        $stmt->execute([$user, $user]);
+        $row = $stmt->fetch();
+
+        return is_array($row) ? $row : null;
+    } catch (Exception) {
+        return null;
+    }
+}
+
+function cityzen_verify_password(?array $row, ?string $pass): bool
+{
+    if (!is_array($row) || $pass === null || $pass === '') {
+        return false;
+    }
+
+    $hash = (string) ($row['password_hash'] ?? '');
+
+    return $hash !== '' && password_verify($pass, $hash);
+}
+
+function cityzen_is_user_blocked(?array $row): bool
+{
+    if (!is_array($row)) {
+        return false;
+    }
+
+    return (int) ($row['blocked'] ?? 0) === 1;
 }
 
 function cityzen_agent_credentials(): array
@@ -209,8 +250,8 @@ function cityzen_post_login_redirect(string $role, string $next): string
         return $next;
     }
 
-    $dash = cityzen_asset('admin/dashboard.php');
-    if ($next === $dash || str_contains($next, '/admin/dashboard.php')) {
+    $dash = cityzen_asset('controller/dashboard.php');
+    if ($next === $dash || str_contains($next, '/controller/dashboard.php')) {
         return cityzen_asset('index.php');
     }
 
@@ -225,11 +266,11 @@ function cityzen_full_public_nav(array $items): array
 {
     $nav = cityzen_public_nav_items($items);
     if (cityzen_is_logged_in()) {
-        $nav[] = ['key' => 'settings', 'label' => 'Parametres', 'url' => '/admin/settings.php'];
-        $nav[] = ['key' => 'logout', 'label' => 'Deconnexion', 'url' => '/admin/logout.php'];
+        $nav[] = ['key' => 'settings', 'label' => 'Parametres', 'url' => '/controller/settings.php'];
+        $nav[] = ['key' => 'logout', 'label' => 'Deconnexion', 'url' => '/controller/logout.php'];
     } else {
         $nav[] = ['key' => 'register', 'label' => 'Creer un compte', 'url' => '/register.php'];
-        $nav[] = ['key' => 'agent-login', 'label' => 'Connexion', 'url' => '/admin/login.php'];
+        $nav[] = ['key' => 'agent-login', 'label' => 'Connexion', 'url' => '/controller/login.php'];
     }
 
     return $nav;
@@ -237,7 +278,7 @@ function cityzen_full_public_nav(array $items): array
 
 function cityzen_safe_next(string $raw): string
 {
-    $fallback = cityzen_asset('admin/dashboard.php');
+    $fallback = cityzen_asset('controller/dashboard.php');
     $raw = rawurldecode(trim($raw));
 
     if ($raw === '') {
@@ -263,7 +304,7 @@ function cityzen_safe_next(string $raw): string
 
 function cityzen_login_url(string $next = ''): string
 {
-    $login = cityzen_asset('admin/login.php');
+    $login = cityzen_asset('controller/login.php');
     if ($next === '') {
         return $login;
     }

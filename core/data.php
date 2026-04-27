@@ -1,9 +1,14 @@
 <?php
 
+$cityzenNow = new DateTimeImmutable('now');
+
+$appName = (string) (getenv('CITYZEN_APP_NAME') ?: 'projet');
+$cityName = (string) (getenv('CITYZEN_CITY_NAME') ?: 'Municipalite de Tunis');
+
 $cityzen = [
-    'app_name' => 'CityZen',
-    'city_name' => 'Municipalite de Tunis',
-    'current_date' => 'Lundi 6 Avr. 2026',
+    'app_name' => $appName,
+    'city_name' => $cityName,
+    'current_date' => $cityzenNow->format('d/m/Y H:i'),
     'user' => [
         'name' => 'Admin',
         'initials' => 'AD',
@@ -113,27 +118,27 @@ $cityzen = [
     ],
     'admin_menu' => [
         ['key' => 'public', 'label' => 'Site public', 'url' => '/index.php'],
-        ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/admin/index.php'],
-        ['key' => 'dashboard', 'label' => 'Tableau de bord', 'url' => '/admin/dashboard.php'],
+        ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/controller/index.php'],
+        ['key' => 'dashboard', 'label' => 'Tableau de bord', 'url' => '/controller/dashboard.php'],
         ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'air', 'label' => 'Qualite air', 'url' => '#qualite-air'],
-        ['key' => 'equipment', 'label' => 'Equipement', 'url' => '/admin/equipment.php'],
-        ['key' => 'eq-tickets', 'label' => 'Tickets equipement', 'url' => '/admin/equipment_tickets.php'],
-        ['key' => 'forum', 'label' => 'Forum', 'url' => '/admin/forum.php'],
+        ['key' => 'transport', 'label' => 'Transports', 'url' => '#transports'],
         ['key' => 'waste', 'label' => 'Dechets', 'url' => '#dechets'],
         ['key' => 'citizens', 'label' => 'Citoyens', 'url' => '#citoyens'],
-        ['key' => 'users', 'label' => 'Utilisateurs', 'url' => '/admin/users.php'],
-        ['key' => 'settings', 'label' => 'Parametres', 'url' => '/admin/settings.php'],
-        ['key' => 'logout', 'label' => 'Deconnexion', 'url' => '/admin/logout.php'],
+        ['key' => 'users', 'label' => 'Utilisateurs', 'url' => '/controller/users.php'],
+        ['key' => 'settings', 'label' => 'Parametres', 'url' => '/controller/settings.php'],
+        ['key' => 'logout', 'label' => 'Deconnexion', 'url' => '/controller/logout.php'],
     ],
     'public_menu' => [
         ['key' => 'home', 'label' => 'Accueil', 'url' => '/index.php'],
         ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
-        ['key' => 'equipment', 'label' => 'Equipement', 'url' => '/equipment/index.php'],
-        ['key' => 'forum', 'label' => 'Forum', 'url' => '/forum/index.php'],
-        ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/admin/index.php'],
-        ['key' => 'back-office', 'label' => 'Back-office', 'url' => '/admin/dashboard.php'],
+        ['key' => 'open-data', 'label' => 'Open Data', 'url' => '#open-data'],
+        ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/controller/index.php'],
+        ['key' => 'back-office', 'label' => 'Back-office', 'url' => '/controller/dashboard.php'],
     ],
 ];
+
+// Expose les donnees en global meme si ce fichier est charge depuis une methode.
+$GLOBALS['cityzen'] = $cityzen;
