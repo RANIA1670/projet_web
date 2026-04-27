@@ -1,1 +1,4 @@
 storage/users.json
+storage/local.env
+storage/mail_stats.json
+storage/logs/
