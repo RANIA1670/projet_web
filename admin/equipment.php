@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../core/layout.php';
 
 cityzen_require_agent();
 
-require_once __DIR__ . '/../equipment_bo/app/config/config.php';
+require_once __DIR__ . '/../equipment/backoffice/app/config/config.php';
 require_once APP_PATH . '/bootstrap/post_actions.php';
 
 try {

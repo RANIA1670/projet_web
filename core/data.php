@@ -120,6 +120,8 @@ $cityzen = [
         ['key' => 'public', 'label' => 'Site public', 'url' => '/index.php'],
         ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/controller/index.php'],
         ['key' => 'dashboard', 'label' => 'Tableau de bord', 'url' => '/controller/dashboard.php'],
+        ['key' => 'equipment-bo', 'label' => 'Équipement (BO)', 'url' => '/admin/equipment.php'],
+        ['key' => 'eq-tickets', 'label' => 'Tickets équipement', 'url' => '/admin/equipment_tickets.php'],
         ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'air', 'label' => 'Qualite air', 'url' => '#qualite-air'],
@@ -136,6 +138,7 @@ $cityzen = [
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'open-data', 'label' => 'Open Data', 'url' => '#open-data'],
         ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/controller/index.php'],
+        ['key' => 'equipment', 'label' => 'Équipement', 'url' => '/equipment/index.php'],
         ['key' => 'back-office', 'label' => 'Back-office', 'url' => '/controller/dashboard.php'],
     ],
 ];

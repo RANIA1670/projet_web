@@ -59,6 +59,7 @@
         qs('#eq-name').value = '';
         qs('#eq-location').value = '';
         qs('#eq-status').value = 'available';
+        if (qs('#eq-price-day')) qs('#eq-price-day').value = '0';
         qs('#eq-lm').value = '';
         qs('#eq-lat').value = '';
         qs('#eq-lng').value = '';
@@ -78,6 +79,7 @@
         qs('#eq-name').value = row.name;
         qs('#eq-status').value = row.status;
         qs('#eq-location').value = row.location || '';
+        if (qs('#eq-price-day')) qs('#eq-price-day').value = row.price_per_day != null ? String(row.price_per_day) : '0';
         qs('#eq-type').value = String(row.type_id);
         qs('#eq-lm').value = row.last_maintenance ? String(row.last_maintenance).slice(0, 10) : '';
         qs('#eq-lat').value = row.latitude != null ? row.latitude : '';

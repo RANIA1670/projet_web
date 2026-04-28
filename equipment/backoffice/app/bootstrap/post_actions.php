@@ -37,12 +37,19 @@ function bo_handle_post(PDO $pdo): bool
                 'status'      => (string) ($_POST['status'] ?? 'available'),
                 'location'    => trim((string) ($_POST['location'] ?? '')),
                 'type_id'     => (int) ($_POST['type_id'] ?? 0),
+                'price_per_day' => max(0, (float) ($_POST['price_per_day'] ?? 0)),
                 'last_maintenance' => trim((string) ($_POST['last_maintenance'] ?? '')) ?: null,
                 'latitude'    => ($latRaw !== '' && $latRaw !== null) ? (float) $latRaw : null,
                 'longitude'   => ($lngRaw !== '' && $lngRaw !== null) ? (float) $lngRaw : null,
             ];
             if ($data['name'] === '' || $data['type_id'] <= 0) {
                 $redirect('equipment', 'Champs obligatoires manquants.', 'error');
+            }
+            if ($data['price_per_day'] <= 0) {
+                $typeRow = $types->find($data['type_id']);
+                if ($typeRow !== null) {
+                    $data['price_per_day'] = max(0, (float) ($typeRow['daily_cost'] ?? 0));
+                }
             }
             $allowed = ['available', 'reserved', 'maintenance', 'out_of_service'];
             if (!in_array($data['status'], $allowed, true)) {

@@ -8,17 +8,17 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
-define('PROJECT_ROOT', dirname(__DIR__, 3));
+define('PROJECT_ROOT', dirname(__DIR__, 4));
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
 define('VIEW_PATH', APP_PATH . '/views');
 define('DATABASE_PATH', APP_PATH . '/database');
 
 if (!function_exists('cityzen_asset')) {
-    require_once PROJECT_ROOT . '/includes/layout.php';
+    require_once PROJECT_ROOT . '/core/layout.php';
 }
 
-require_once PROJECT_ROOT . '/includes/db.php';
+require_once PROJECT_ROOT . '/model/db.php';
 
 try {
     $pdo = cityzen_db();

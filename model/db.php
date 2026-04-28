@@ -15,7 +15,7 @@ function cityzen_db(): PDO
     }
 
     $host = getenv('CITYZEN_DB_HOST') ?: '127.0.0.1';
-    $name = getenv('CITYZEN_DB_NAME') ?: 'projet';
+    $name = getenv('CITYZEN_DB_NAME') ?: (getenv('DB_NAME') ?: 'cityzen');
     $user = getenv('CITYZEN_DB_USER') ?: 'root';
     $dbPass = getenv('CITYZEN_DB_PASS');
     $pass = $dbPass === false ? '' : (string) $dbPass;
@@ -53,6 +53,17 @@ function cityzen_db_index_exists(PDO $pdo, string $table, string $index): bool
         'SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?'
     );
     $stmt->execute([$name, $table, $index]);
+
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+function cityzen_db_table_exists(PDO $pdo, string $table): bool
+{
+    $name = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?'
+    );
+    $stmt->execute([$name, $table]);
 
     return (int) $stmt->fetchColumn() > 0;
 }
@@ -102,6 +113,87 @@ function cityzen_db_ensure_schema(PDO $pdo): void
 
     if (!cityzen_db_index_exists($pdo, 'users', 'uq_users_qr_token')) {
         $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uq_users_qr_token (qr_token)');
+    }
+
+    if (cityzen_db_table_exists($pdo, 'equipment')) {
+        if (!cityzen_db_column_exists($pdo, 'equipment', 'price_per_day')) {
+            $pdo->exec('ALTER TABLE equipment ADD COLUMN price_per_day DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER type_id');
+        }
+        $pdo->exec(
+            'UPDATE equipment e
+             INNER JOIN type_equipment t ON t.id = e.type_id
+             SET e.price_per_day = t.daily_cost
+             WHERE e.price_per_day IS NULL OR e.price_per_day <= 0'
+        );
+    }
+
+    if (cityzen_db_table_exists($pdo, 'reservation')) {
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'price_days')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN price_days INT UNSIGNED NOT NULL DEFAULT 1 AFTER end_date');
+        }
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'price_per_day')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN price_per_day DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER price_days');
+        }
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'price_subtotal')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN price_subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER price_per_day');
+        }
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'discount_code')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN discount_code VARCHAR(64) NULL AFTER price_subtotal');
+        }
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'discount_percent')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN discount_percent TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER discount_code');
+        }
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'discount_amount')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER discount_percent');
+        }
+        if (!cityzen_db_column_exists($pdo, 'reservation', 'price_total')) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN price_total DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER discount_amount');
+        }
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'equipment_discount_code')) {
+        $pdo->exec(
+            "CREATE TABLE equipment_discount_code (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(64) NOT NULL,
+                user_id INT UNSIGNED NULL,
+                discount_percent TINYINT UNSIGNED NOT NULL,
+                status ENUM('active','used','expired') NOT NULL DEFAULT 'active',
+                generated_from ENUM('lucky_spin','manual') NOT NULL DEFAULT 'lucky_spin',
+                valid_from DATETIME NOT NULL,
+                valid_until DATETIME NOT NULL,
+                used_at DATETIME NULL,
+                used_reservation_id INT UNSIGNED NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_equipment_discount_code (code),
+                KEY idx_equipment_discount_user_status (user_id, status),
+                KEY idx_equipment_discount_validity (valid_from, valid_until),
+                CONSTRAINT fk_equipment_discount_user
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                    ON DELETE SET NULL ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'equipment_lucky_spin')) {
+        $pdo->exec(
+            "CREATE TABLE equipment_lucky_spin (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                spin_date DATE NOT NULL,
+                outcome ENUM('no_win','discount') NOT NULL DEFAULT 'no_win',
+                discount_code_id INT UNSIGNED NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_lucky_spin_user_day (user_id, spin_date),
+                KEY idx_lucky_spin_date (spin_date),
+                CONSTRAINT fk_lucky_spin_user
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_lucky_spin_code
+                    FOREIGN KEY (discount_code_id) REFERENCES equipment_discount_code(id)
+                    ON DELETE SET NULL ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 }
 

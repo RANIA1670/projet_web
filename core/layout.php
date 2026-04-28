@@ -7,7 +7,7 @@ function cityzen_base_path(): string
     $script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     $lastSegment = basename($script);
 
-    if (in_array($lastSegment, ['admin', 'api', 'includes', 'controller', 'controller', 'api'], true)) {
+    if (in_array($lastSegment, ['admin', 'api', 'includes', 'controller', 'equipment', 'forum'], true)) {
         $script = dirname($script);
     }
 
@@ -86,9 +86,10 @@ function cityzen_icon(string $status): string
     };
 }
 
-function cityzen_render_head(string $title): void
+function cityzen_render_head(string $title, array $extraStyles = [], string $bodyClass = ''): void
 {
     $app = (string) (($GLOBALS['cityzen']['app_name'] ?? '') ?: (getenv('CITYZEN_APP_NAME') ?: 'projet'));
+    $bodyClassAttr = $bodyClass !== '' ? ' class="' . htmlspecialchars($bodyClass) . '"' : '';
     ?>
     <!DOCTYPE html>
     <html lang="fr">
@@ -100,8 +101,11 @@ function cityzen_render_head(string $title): void
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
       <link rel="stylesheet" href="<?= htmlspecialchars(cityzen_asset('assets/css/style.css')) ?>">
+      <?php foreach ($extraStyles as $href): ?>
+      <link rel="stylesheet" href="<?= htmlspecialchars((string) $href) ?>">
+      <?php endforeach; ?>
     </head>
-    <body>
+    <body<?= $bodyClassAttr ?>>
     <?php
 }
 

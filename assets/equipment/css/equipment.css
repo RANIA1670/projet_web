@@ -704,3 +704,220 @@ button, input, select, textarea { font: inherit; }
 .admin-layout-equipment .admin-page--equipment {
   min-width: 0;
 }
+
+/* Reserve page micro-interactions */
+#eq-price-preview {
+  margin-top: 4px;
+  transition: color .25s ease, transform .25s ease, opacity .25s ease;
+  opacity: .9;
+}
+.eq-form { max-width: 100%; }
+.eq-form input, .eq-form select, .eq-form textarea { width: 100%; }
+.eq-reserve-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.eq-reserve-main {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+.eq-reserve-side {
+  min-width: 0;
+  position: sticky;
+  top: 14px;
+}
+#eq-price-preview.is-ready {
+  color: #0f766e;
+  opacity: 1;
+}
+#eq-price-preview.price-bump {
+  animation: eqPriceBump .45s ease;
+}
+.eq-suggestion-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--surface-soft);
+  animation: eqSuggestionEnter .45s ease both;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+.eq-suggestion-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  border-color: rgba(26,115,232,.35);
+  box-shadow: 0 8px 18px rgba(26,115,232,.14);
+}
+.eq-suggestion-card .eq-page-lead { margin: 0 0 8px; }
+.eq-spin-box {
+  margin-top: 2px;
+  background: linear-gradient(140deg, #f8fcff 0%, #eef8ff 45%, #f8fbf2 100%);
+  border: 1px solid #cfe2f6;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(26,115,232,.08);
+  animation: eqFloatCard 3.8s ease-in-out infinite;
+}
+.eq-spin-box::before {
+  content: "";
+  position: absolute;
+  inset: -40% auto auto -30%;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(26,115,232,.12) 0%, rgba(26,115,232,0) 72%);
+  pointer-events: none;
+}
+.eq-spin-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.35) 45%, transparent 60%);
+  transform: translateX(-120%);
+  animation: eqShimmer 4.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.eq-spin-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.eq-spin-wheel {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 3px solid #7cc4ff;
+  background: conic-gradient(from 0deg, #93c5fd, #86efac, #fde68a, #fca5a5, #93c5fd);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.8);
+}
+.eq-spin-wheel span {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+.eq-spin-wheel.is-spinning {
+  animation: eqWheelSpin .22s linear infinite;
+}
+.eq-spin-title { margin: 0 0 6px; }
+#eq-spin-state { margin: 0 0 8px; font-weight: 700; }
+.eq-spin-sub { margin: 0; color: var(--muted); font-size: .84rem; }
+#eq-spin-result { margin-top: 8px; }
+#eq-spin-btn.is-spinning {
+  animation: eqSpinPulse .85s ease-in-out infinite;
+}
+#eq-spin-btn:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+#eq-spin-btn:not(:disabled) {
+  border-color: #73b6ff;
+  color: #185ea8;
+  background: #fff;
+}
+#eq-spin-btn:not(:disabled):hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 14px rgba(26,115,232,.16);
+}
+.eq-spin-box:hover #eq-spin-btn:not(:disabled) {
+  animation: eqButtonBounce .8s ease-in-out infinite alternate;
+}
+.eq-spin-box.is-win {
+  border-color: rgba(45,179,93,.45);
+  box-shadow: 0 10px 26px rgba(45,179,93,.14);
+  animation: eqWinPulse .7s ease 2;
+}
+.eq-spin-box.is-lose {
+  border-color: rgba(123,135,148,.35);
+  box-shadow: 0 8px 20px rgba(36,59,83,.08);
+}
+#eq-spin-result.spin-reveal {
+  animation: eqReveal .35s ease;
+}
+#eq-discount-code.code-highlight {
+  animation: eqCodeGlow 1.1s ease;
+}
+@keyframes eqPriceBump {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-2px) scale(1.01); }
+  100% { transform: translateY(0); }
+}
+@keyframes eqSuggestionEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes eqSpinPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(26,115,232,0); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 4px rgba(26,115,232,.12); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(26,115,232,0); }
+}
+@keyframes eqWheelSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes eqFloatCard {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes eqShimmer {
+  0%, 65% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@keyframes eqButtonBounce {
+  from { transform: translateY(-1px) scale(1.01); }
+  to { transform: translateY(-3px) scale(1.03); }
+}
+@keyframes eqWinPulse {
+  0% { box-shadow: 0 0 0 0 rgba(45,179,93,.26); }
+  100% { box-shadow: 0 0 0 14px rgba(45,179,93,0); }
+}
+@keyframes eqReveal {
+  from { opacity: .2; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes eqCodeGlow {
+  0% { box-shadow: 0 0 0 0 rgba(45,179,93,.2); border-color: var(--line); }
+  45% { box-shadow: 0 0 0 5px rgba(45,179,93,.15); border-color: rgba(45,179,93,.6); }
+  100% { box-shadow: 0 0 0 0 rgba(45,179,93,0); border-color: var(--line); }
+}
+
+.eq-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.eq-confetti-piece {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  opacity: 0;
+}
+.eq-confetti.is-active .eq-confetti-piece {
+  animation: eqConfettiFall 1.2s cubic-bezier(.2,.85,.35,1) forwards;
+}
+@keyframes eqConfettiFall {
+  0% { opacity: 0; transform: translateY(-10px) rotate(0deg); }
+  10% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(210px) rotate(520deg); }
+}
+
+@media (max-width: 980px) {
+  .eq-reserve-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .eq-reserve-side {
+    position: static;
+  }
+}

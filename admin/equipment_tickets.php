@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../core/layout.php';
 
 cityzen_require_agent();
 
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../equipment_bo/app/models/EquipmentIssue.php';
+require_once __DIR__ . '/../model/db.php';
+require_once __DIR__ . '/../equipment/backoffice/app/models/EquipmentIssue.php';
 
 $pdo = cityzen_db();
 $issues = new EquipmentIssue($pdo);

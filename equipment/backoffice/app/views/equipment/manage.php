@@ -50,7 +50,7 @@
         <thead>
           <tr>
             <th><input type="checkbox" id="check-all" title="Tout"></th>
-            <th>Nom</th><th>Type</th><th>Lieu</th><th>Statut</th><th>Dernière m.</th><th>GPS</th><th></th>
+            <th>Nom</th><th>Type</th><th>Prix / jour</th><th>Lieu</th><th>Statut</th><th>Dernière m.</th><th>GPS</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -59,6 +59,7 @@
             <td><input type="checkbox" name="equipment_ids[]" value="<?= (int) $eq['id'] ?>"></td>
             <td><?= htmlspecialchars((string) $eq['name'], ENT_QUOTES, 'UTF-8') ?></td>
             <td><?= htmlspecialchars((string) ($eq['type_icon'] ?? '') . ' ' . ($eq['type_category_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+            <td><?= number_format((float) ($eq['price_per_day'] ?? 0), 2, ',', ' ') ?> TND</td>
             <td class="bo-td-notes"><?= htmlspecialchars((string) $eq['location'], ENT_QUOTES, 'UTF-8') ?></td>
             <td><span class="bo-badge"><?= htmlspecialchars((string) $eq['status'], ENT_QUOTES, 'UTF-8') ?></span></td>
             <td><?= $eq['last_maintenance'] ? htmlspecialchars((string) $eq['last_maintenance'], ENT_QUOTES, 'UTF-8') : '—' ?></td>
@@ -69,6 +70,7 @@
               'status' => $eq['status'],
               'location' => $eq['location'],
               'type_id' => (int) $eq['type_id'],
+              'price_per_day' => (float) ($eq['price_per_day'] ?? 0),
               'last_maintenance' => $eq['last_maintenance'] ?? '',
               'latitude' => $eq['latitude'],
               'longitude' => $eq['longitude'],
@@ -109,6 +111,10 @@
               <option value="<?= $st ?>"><?= $st ?></option>
             <?php endforeach; ?>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Prix par jour (TND)</label>
+          <input type="number" step="0.01" min="0" name="price_per_day" id="eq-price-day" value="0">
         </div>
         <div class="form-group full">
           <label>Lieu</label>

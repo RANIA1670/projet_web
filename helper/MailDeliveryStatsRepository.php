@@ -13,11 +13,18 @@ final class MailDeliveryStatsRepository
 {
     private string $statsFile;
     private string $logFile;
+    private bool $storageEnabled = true;
 
     public function __construct(?string $statsFile = null, ?string $logFile = null)
     {
-        $this->statsFile = $statsFile ?: __DIR__ . '/../storage/mail_stats.json';
-        $this->logFile = $logFile ?: __DIR__ . '/../storage/logs/mail_delivery.log';
+        $defaultStats = $statsFile ?: __DIR__ . '/../storage/mail_stats.json';
+        $defaultLog = $logFile ?: __DIR__ . '/../storage/logs/mail_delivery.log';
+
+        $this->statsFile = $this->resolveWritablePath($defaultStats, 'mail_stats.json');
+        $this->logFile = $this->resolveWritablePath($defaultLog, 'mail_delivery.log');
+        if ($this->statsFile === '' || $this->logFile === '') {
+            $this->storageEnabled = false;
+        }
     }
 
     /**
@@ -25,9 +32,16 @@ final class MailDeliveryStatsRepository
      */
     public function record(array $event): void
     {
+        if (!$this->storageEnabled) {
+            return;
+        }
         $event['timestamp'] = gmdate('c');
-        $this->appendLog($event);
-        $this->updateStats($event);
+        try {
+            $this->appendLog($event);
+            $this->updateStats($event);
+        } catch (RuntimeException) {
+            // Le suivi email ne doit jamais casser le flux principal (inscription/login/etc).
+        }
     }
 
     /**
@@ -35,6 +49,9 @@ final class MailDeliveryStatsRepository
      */
     public function getSummary(): array
     {
+        if (!$this->storageEnabled) {
+            return $this->defaultStats();
+        }
         $this->ensureDir(dirname($this->statsFile));
         if (!is_file($this->statsFile)) {
             return $this->defaultStats();
@@ -52,6 +69,9 @@ final class MailDeliveryStatsRepository
     public function recentLogs(int $limit = 100): array
     {
         $limit = max(1, min(500, $limit));
+        if (!$this->storageEnabled) {
+            return [];
+        }
         $this->ensureDir(dirname($this->logFile));
         if (!is_file($this->logFile)) {
             return [];
@@ -148,9 +168,34 @@ final class MailDeliveryStatsRepository
             return;
         }
 
-        if (!mkdir($dir, 0777, true) && !is_dir($dir)) {
+        if (!@mkdir($dir, 0777, true) && !is_dir($dir)) {
             throw new RuntimeException('Impossible de creer le dossier: ' . $dir);
         }
+    }
+
+    private function resolveWritablePath(string $preferredPath, string $fileName): string
+    {
+        $preferredDir = dirname($preferredPath);
+        try {
+            $this->ensureDir($preferredDir);
+            if (is_writable($preferredDir)) {
+                return $preferredPath;
+            }
+        } catch (RuntimeException) {
+            // fallback below
+        }
+
+        $fallbackDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'cityzen_logs';
+        try {
+            $this->ensureDir($fallbackDir);
+            if (is_writable($fallbackDir)) {
+                return $fallbackDir . DIRECTORY_SEPARATOR . $fileName;
+            }
+        } catch (RuntimeException) {
+            // ignore and disable storage
+        }
+
+        return '';
     }
 
     /**

@@ -4,6 +4,8 @@ USE cityzen;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS reservation;
+DROP TABLE IF EXISTS equipment_lucky_spin;
+DROP TABLE IF EXISTS equipment_discount_code;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS type_equipment;
 DROP TABLE IF EXISTS users;
@@ -32,6 +34,7 @@ CREATE TABLE equipment (
     status             ENUM('available','reserved','maintenance','out_of_service') NOT NULL DEFAULT 'available',
     location           VARCHAR(255)    NOT NULL DEFAULT '',
     type_id            INT UNSIGNED    NOT NULL,
+    price_per_day      DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
     last_maintenance   DATE            NULL,
     latitude           DECIMAL(10,8)   NULL,
     longitude          DECIMAL(11,8)   NULL,
@@ -46,6 +49,13 @@ CREATE TABLE reservation (
     user_id            INT UNSIGNED    NULL,
     start_date         DATETIME        NOT NULL,
     end_date           DATETIME        NOT NULL,
+    price_days         INT UNSIGNED    NOT NULL DEFAULT 1,
+    price_per_day      DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
+    price_subtotal     DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
+    discount_code      VARCHAR(64)     NULL,
+    discount_percent   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    discount_amount    DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
+    price_total        DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
     purpose            TEXT            NULL,
     status             ENUM('pending','approved','rejected','returned','no_show') NOT NULL DEFAULT 'pending',
     rejection_reason   TEXT            NULL,
@@ -60,6 +70,43 @@ CREATE TABLE reservation (
         ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE equipment_discount_code (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code                VARCHAR(64) NOT NULL,
+    user_id             INT UNSIGNED NULL,
+    discount_percent    TINYINT UNSIGNED NOT NULL,
+    status              ENUM('active','used','expired') NOT NULL DEFAULT 'active',
+    generated_from      ENUM('lucky_spin','manual') NOT NULL DEFAULT 'lucky_spin',
+    valid_from          DATETIME NOT NULL,
+    valid_until         DATETIME NOT NULL,
+    used_at             DATETIME NULL,
+    used_reservation_id INT UNSIGNED NULL,
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_equipment_discount_code (code),
+    KEY idx_equipment_discount_user_status (user_id, status),
+    KEY idx_equipment_discount_validity (valid_from, valid_until),
+    CONSTRAINT fk_equipment_discount_user
+      FOREIGN KEY (user_id) REFERENCES users(id)
+      ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE equipment_lucky_spin (
+    id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id          INT UNSIGNED NOT NULL,
+    spin_date        DATE NOT NULL,
+    outcome          ENUM('no_win','discount') NOT NULL DEFAULT 'no_win',
+    discount_code_id INT UNSIGNED NULL,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_lucky_spin_user_day (user_id, spin_date),
+    KEY idx_lucky_spin_date (spin_date),
+    CONSTRAINT fk_lucky_spin_user
+      FOREIGN KEY (user_id) REFERENCES users(id)
+      ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_lucky_spin_code
+      FOREIGN KEY (discount_code_id) REFERENCES equipment_discount_code(id)
+      ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO users (full_name, email) VALUES
 ('Marie Dupont', 'marie.d@cityzen.test'),
 ('Service voirie', NULL),
@@ -72,16 +119,16 @@ INSERT INTO type_equipment (category_name, icon, daily_cost, warranty_months, de
 ('Events & AV', '🎪', 120.00, 12, 2),
 ('Surveillance Camera', '📷', 35.00, 24, 1);
 
-INSERT INTO equipment (name, status, location, type_id, last_maintenance, latitude, longitude) VALUES
-('Excavator CAT 320', 'available', 'Depot Nord — allée B', 1, '2025-11-20', 36.8065, 10.1815),
-('Lift platform 12m', 'available', 'Depot Nord — allée A', 1, NULL, 36.8070, 10.1820),
-('Renault Master van', 'maintenance', 'Atelier central', 2, '2026-01-10', 36.8500, 10.1900),
-('Peugeot Partner', 'available', 'Parking services', 2, '2025-09-05', 36.7980, 10.1750),
-('PA system 500W', 'available', 'Logistique événements', 3, NULL, 36.7900, 10.1700),
-('Folding tent 4x4m', 'out_of_service', 'Hangar 3', 3, '2024-06-01', NULL, NULL),
-('Caméra PTZ Hall A', 'available', 'Mairie — hall A', 4, '2025-08-01', 36.7990, 10.1780),
-('Caméra parking', 'available', 'Mairie — parking', 4, NULL, 36.7992, 10.1785),
-('Smart Bench jardin', 'available', 'Parc central', 3, NULL, 36.8020, 10.1800);
+INSERT INTO equipment (name, status, location, type_id, price_per_day, last_maintenance, latitude, longitude) VALUES
+('Excavator CAT 320', 'available', 'Depot Nord — allée B', 1, 450.00, '2025-11-20', 36.8065, 10.1815),
+('Lift platform 12m', 'available', 'Depot Nord — allée A', 1, 450.00, NULL, 36.8070, 10.1820),
+('Renault Master van', 'maintenance', 'Atelier central', 2, 85.50, '2026-01-10', 36.8500, 10.1900),
+('Peugeot Partner', 'available', 'Parking services', 2, 85.50, '2025-09-05', 36.7980, 10.1750),
+('PA system 500W', 'available', 'Logistique événements', 3, 120.00, NULL, 36.7900, 10.1700),
+('Folding tent 4x4m', 'out_of_service', 'Hangar 3', 3, 120.00, '2024-06-01', NULL, NULL),
+('Caméra PTZ Hall A', 'available', 'Mairie — hall A', 4, 35.00, '2025-08-01', 36.7990, 10.1780),
+('Caméra parking', 'available', 'Mairie — parking', 4, 35.00, NULL, 36.7992, 10.1785),
+('Smart Bench jardin', 'available', 'Parc central', 3, 120.00, NULL, 36.8020, 10.1800);
 
 INSERT INTO reservation (equipment_id, user_id, start_date, end_date, purpose, status, rejection_reason, returned_at) VALUES
 (1, 1, DATE_ADD(NOW(), INTERVAL 2 DAY), DATE_ADD(NOW(), INTERVAL 5 DAY), 'Travaux voirie — tranchée', 'pending', NULL, NULL),

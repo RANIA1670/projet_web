@@ -17,8 +17,8 @@ class Equipment
      */
     public function allWithType(?int $typeId = null, ?string $status = null, ?string $location = null): array
     {
-        $sql = 'SELECT e.id, e.name, e.status, e.location, e.type_id, e.last_maintenance, e.latitude, e.longitude,
-                       t.category_name AS type_category_name, t.icon AS type_icon
+        $sql = 'SELECT e.id, e.name, e.status, e.location, e.type_id, e.price_per_day, e.last_maintenance, e.latitude, e.longitude,
+                       t.category_name AS type_category_name, t.icon AS type_icon, t.daily_cost AS type_daily_cost
                 FROM equipment e
                 INNER JOIN type_equipment t ON t.id = e.type_id
                 WHERE 1=1';
@@ -47,7 +47,7 @@ class Equipment
     public function find(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, name, status, location, type_id, last_maintenance, latitude, longitude FROM equipment WHERE id = :id'
+            'SELECT id, name, status, location, type_id, price_per_day, last_maintenance, latitude, longitude FROM equipment WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch();
@@ -60,8 +60,8 @@ class Equipment
     public function findWithType(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT e.id, e.name, e.status, e.location, e.type_id, e.last_maintenance, e.latitude, e.longitude,
-                    t.category_name AS type_category_name, t.icon AS type_icon
+            'SELECT e.id, e.name, e.status, e.location, e.type_id, e.price_per_day, e.last_maintenance, e.latitude, e.longitude,
+                    t.category_name AS type_category_name, t.icon AS type_icon, t.daily_cost AS type_daily_cost
              FROM equipment e
              INNER JOIN type_equipment t ON t.id = e.type_id
              WHERE e.id = :id'
@@ -73,19 +73,21 @@ class Equipment
     }
 
     /**
-     * @param array{name:string,status:string,location:string,type_id:int,last_maintenance?:?string,latitude?:?float,longitude?:?float} $data
+     * @param array{name:string,status:string,location:string,type_id:int,price_per_day?:float,last_maintenance?:?string,latitude?:?float,longitude?:?float} $data
      */
     public function create(array $data): int
     {
+        $pricePerDay = max(0, (float) ($data['price_per_day'] ?? 0));
         $stmt = $this->pdo->prepare(
-            'INSERT INTO equipment (name, status, location, type_id, last_maintenance, latitude, longitude)
-             VALUES (:n, :s, :l, :t, :lm, :lat, :lng)'
+            'INSERT INTO equipment (name, status, location, type_id, price_per_day, last_maintenance, latitude, longitude)
+             VALUES (:n, :s, :l, :t, :ppd, :lm, :lat, :lng)'
         );
         $stmt->execute([
             ':n'   => $data['name'],
             ':s'   => $data['status'],
             ':l'   => $data['location'],
             ':t'   => $data['type_id'],
+            ':ppd' => $pricePerDay,
             ':lm'  => $data['last_maintenance'] ?? null,
             ':lat' => $data['latitude'] ?? null,
             ':lng' => $data['longitude'] ?? null,
@@ -94,12 +96,13 @@ class Equipment
     }
 
     /**
-     * @param array{name:string,status:string,location:string,type_id:int,last_maintenance?:?string,latitude?:?float,longitude?:?float} $data
+     * @param array{name:string,status:string,location:string,type_id:int,price_per_day?:float,last_maintenance?:?string,latitude?:?float,longitude?:?float} $data
      */
     public function update(int $id, array $data): bool
     {
+        $pricePerDay = max(0, (float) ($data['price_per_day'] ?? 0));
         $stmt = $this->pdo->prepare(
-            'UPDATE equipment SET name = :n, status = :s, location = :l, type_id = :t,
+            'UPDATE equipment SET name = :n, status = :s, location = :l, type_id = :t, price_per_day = :ppd,
              last_maintenance = :lm, latitude = :lat, longitude = :lng WHERE id = :id'
         );
         $stmt->execute([
@@ -107,6 +110,7 @@ class Equipment
             ':s'   => $data['status'],
             ':l'   => $data['location'],
             ':t'   => $data['type_id'],
+            ':ppd' => $pricePerDay,
             ':lm'  => $data['last_maintenance'] ?? null,
             ':lat' => $data['latitude'] ?? null,
             ':lng' => $data['longitude'] ?? null,

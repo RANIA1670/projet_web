@@ -9,11 +9,11 @@ if (!isset($eq_extra_css) || !is_array($eq_extra_css)) {
     $eq_extra_css = [];
 }
 
-require_once dirname(__DIR__, 2) . '/includes/layout.php';
+require_once dirname(__DIR__, 2) . '/core/layout.php';
 
 global $cityzen;
 
-$styles = array_merge([cityzen_asset('assets/css/equipment_public.css')], $eq_extra_css);
+$styles = array_merge([cityzen_asset('assets/css/equipment_public.css?v=20260428b')], $eq_extra_css);
 cityzen_render_head($eq_title, $styles);
 ?>
 <div class="site-shell">
