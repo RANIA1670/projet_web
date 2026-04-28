@@ -277,3 +277,157 @@ function cityzen_user_stats(): array
         return ['total' => 0, 'admins' => 0, 'users' => 0, 'blocked' => 0];
     }
 }
+
+function cityzen_detailed_stats(?string $dateFilter = null, ?string $categoryFilter = null): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        // Date filter clause
+        $dateClause = '';
+        if ($dateFilter) {
+            switch ($dateFilter) {
+                case 'today':
+                    $dateClause = "AND DATE(created_at) = CURDATE()";
+                    break;
+                case 'week':
+                    $dateClause = "AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                    break;
+                case 'month':
+                    $dateClause = "AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+                    break;
+                case 'year':
+                    $dateClause = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
+                    break;
+            }
+        }
+        
+        // Basic stats
+        $basicStats = $pdo->query(
+            "SELECT COUNT(*) AS total_users,
+                    SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) AS total_admins,
+                    SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) AS total_regular_users,
+                    SUM(CASE WHEN blocked = 1 THEN 1 ELSE 0 END) AS total_blocked,
+                    SUM(CASE WHEN profile_photo IS NOT NULL AND profile_photo != '' THEN 1 ELSE 0 END) AS with_photos,
+                    SUM(CASE WHEN qr_token IS NOT NULL THEN 1 ELSE 0 END) AS with_qr_codes
+             FROM users 
+             WHERE 1=1 $dateClause"
+        )->fetch();
+        
+        // Daily registrations (last 30 days)
+        $dailyRegistrations = $pdo->query(
+            "SELECT DATE(created_at) as date, COUNT(*) as count
+             FROM users 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+             GROUP BY DATE(created_at)
+             ORDER BY date DESC
+             LIMIT 30"
+        )->fetchAll();
+        
+        // Weekly registrations (last 12 weeks)
+        $weeklyRegistrations = $pdo->query(
+            "SELECT YEARWEEK(created_at) as week, COUNT(*) as count,
+                    MIN(DATE(created_at)) as week_start
+             FROM users 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
+             GROUP BY YEARWEEK(created_at)
+             ORDER BY week DESC
+             LIMIT 12"
+        )->fetchAll();
+        
+        // Monthly registrations (last 12 months)
+        $monthlyRegistrations = $pdo->query(
+            "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count,
+                    MONTHNAME(created_at) as month_name
+             FROM users 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+             GROUP BY DATE_FORMAT(created_at, '%Y-%m'), MONTHNAME(created_at)
+             ORDER BY month DESC
+             LIMIT 12"
+        )->fetchAll();
+        
+        // User distribution by role
+        $roleDistribution = $pdo->query(
+            "SELECT role, COUNT(*) as count,
+                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 2) as percentage
+             FROM users 
+             WHERE 1=1 $dateClause
+             GROUP BY role
+             ORDER BY count DESC"
+        )->fetchAll();
+        
+        // User distribution by city (top 10)
+        $cityDistribution = $pdo->query(
+            "SELECT city, COUNT(*) as count,
+                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users WHERE city IS NOT NULL), 2) as percentage
+             FROM users 
+             WHERE city IS NOT NULL AND city != '' $dateClause
+             GROUP BY city
+             ORDER BY count DESC
+             LIMIT 10"
+        )->fetchAll();
+        
+        // Recent registrations (last 7 days)
+        $recentRegistrations = $pdo->query(
+            "SELECT id, username, full_name, email, city, created_at, role
+             FROM users 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+             ORDER BY created_at DESC
+             LIMIT 10"
+        )->fetchAll();
+        
+        // Registration trends (growth rate)
+        $growthStats = $pdo->query(
+            "SELECT 
+                COUNT(*) as current_period,
+                (SELECT COUNT(*) FROM users 
+                 WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY) AND 
+                       created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)) as previous_period,
+                ROUND(((COUNT(*) - 
+                 (SELECT COUNT(*) FROM users 
+                  WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY) AND 
+                        created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))) * 100.0 / 
+                 (SELECT COUNT(*) FROM users 
+                  WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY) AND 
+                        created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY))), 2) as growth_rate
+             FROM users 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+        )->fetch();
+        
+        return [
+            'basic_stats' => [
+                'total_users' => (int) ($basicStats['total_users'] ?? 0),
+                'total_admins' => (int) ($basicStats['total_admins'] ?? 0),
+                'total_regular_users' => (int) ($basicStats['total_regular_users'] ?? 0),
+                'total_blocked' => (int) ($basicStats['total_blocked'] ?? 0),
+                'with_photos' => (int) ($basicStats['with_photos'] ?? 0),
+                'with_qr_codes' => (int) ($basicStats['with_qr_codes'] ?? 0),
+            ],
+            'daily_registrations' => $dailyRegistrations,
+            'weekly_registrations' => $weeklyRegistrations,
+            'monthly_registrations' => $monthlyRegistrations,
+            'role_distribution' => $roleDistribution,
+            'city_distribution' => $cityDistribution,
+            'recent_registrations' => $recentRegistrations,
+            'growth_stats' => [
+                'current_period' => (int) ($growthStats['current_period'] ?? 0),
+                'previous_period' => (int) ($growthStats['previous_period'] ?? 0),
+                'growth_rate' => (float) ($growthStats['growth_rate'] ?? 0),
+            ],
+            'date_filter' => $dateFilter,
+        ];
+    } catch (Throwable $e) {
+        return [
+            'basic_stats' => ['total_users' => 0, 'total_admins' => 0, 'total_regular_users' => 0, 'total_blocked' => 0, 'with_photos' => 0, 'with_qr_codes' => 0],
+            'daily_registrations' => [],
+            'weekly_registrations' => [],
+            'monthly_registrations' => [],
+            'role_distribution' => [],
+            'city_distribution' => [],
+            'recent_registrations' => [],
+            'growth_stats' => ['current_period' => 0, 'previous_period' => 0, 'growth_rate' => 0],
+            'date_filter' => $dateFilter,
+            'error' => $e->getMessage(),
+        ];
+    }
+}

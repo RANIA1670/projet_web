@@ -17,6 +17,10 @@ cityzen_render_head('Tableau de bord');
           <?= htmlspecialchars($item['label']) ?>
         </a>
       <?php endforeach; ?>
+      <a href="<?= htmlspecialchars(cityzen_asset('controller/statistics.php')) ?>" class="nav-statistics">
+        <span class="nav-bullet"></span>
+        📊 Statistiques
+      </a>
     </nav>
   </aside>
 
@@ -43,6 +47,30 @@ cityzen_render_head('Tableau de bord');
       <h2>Comptes utilisateurs</h2>
       <p class="panel-lead">Gestion complete dans l&apos;espace dedie : liste, recherche, tri, pagination, modification, suppression et export PDF.</p>
       <p><a class="users-admin-cta" href="<?= htmlspecialchars(cityzen_asset('controller/users.php')) ?>">Ouvrir la gestion des utilisateurs</a></p>
+    </section>
+
+    <section class="panel statistics-summary-section" id="statistiques">
+      <h2>📊 Statistiques détaillées</h2>
+      <p class="panel-lead">Consultez des statistiques complètes avec graphiques, tendances et analyses détaillées de l&apos;activité des utilisateurs.</p>
+      <div class="stats-preview">
+        <div class="stat-preview-item">
+          <strong><?= $userStats['total'] ?></strong>
+          <span>Total utilisateurs</span>
+        </div>
+        <div class="stat-preview-item">
+          <strong><?= $userStats['admins'] ?></strong>
+          <span>Administrateurs</span>
+        </div>
+        <div class="stat-preview-item">
+          <strong><?= $userStats['users'] ?></strong>
+          <span>Utilisateurs actifs</span>
+        </div>
+        <div class="stat-preview-item">
+          <strong><?= $userStats['blocked'] ?></strong>
+          <span>Comptes bloqués</span>
+        </div>
+      </div>
+      <p><a class="users-admin-cta" href="<?= htmlspecialchars(cityzen_asset('controller/statistics.php')) ?>">📊 Voir les statistiques complètes</a></p>
     </section>
 
     <section class="admin-stats">
