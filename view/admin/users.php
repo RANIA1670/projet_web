@@ -114,9 +114,6 @@ cityzen_render_head('Gestion des utilisateurs');
       <div class="reports-table users-mgmt-table">
         <div class="table-head users-mgmt-head">
           <span>
-            <a class="sort-link" href="<?= htmlspecialchars(UsersPageHelper::url($baseUrl, $get, ['sort' => 'id', 'dir' => UsersPageHelper::nextDir('id', $sort, $dir), 'page' => '1'])) ?>">ID<?= $sort === 'id' ? ($dir === 'ASC' ? ' ^' : ' v') : '' ?></a>
-          </span>
-          <span>
             <a class="sort-link" href="<?= htmlspecialchars(UsersPageHelper::url($baseUrl, $get, ['sort' => 'username', 'dir' => UsersPageHelper::nextDir('username', $sort, $dir), 'page' => '1'])) ?>">Utilisateur<?= $sort === 'username' ? ($dir === 'ASC' ? ' ^' : ' v') : '' ?></a>
           </span>
           <span>
@@ -141,7 +138,6 @@ cityzen_render_head('Gestion des utilisateurs');
             $ublocked = (int) ($urow['blocked'] ?? 0) === 1;
           ?>
           <div class="table-row users-mgmt-row">
-            <span><?= $uid ?></span>
             <span><strong><?= htmlspecialchars($uname) ?></strong></span>
             <span><?= htmlspecialchars($fullName !== '' ? $fullName : '—') ?></span>
             <span><em class="pill <?= $urole === 'admin' ? 'progress' : 'done' ?>"><?= $urole === 'admin' ? 'Administrateur' : 'Citoyen' ?></em></span>

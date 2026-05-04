@@ -2,8 +2,56 @@
 
 require_once __DIR__ . '/data.php';
 
+function cityzen_env_base_path(): string
+{
+    $configured = trim((string) (getenv('CITYZEN_BASE_PATH') ?: ''));
+    if ($configured === '') {
+        return '';
+    }
+
+    $configured = '/' . trim($configured, " \t\n\r\0\x0B/");
+
+    return $configured === '/' ? '' : $configured;
+}
+
+function cityzen_project_base_path_from_fs(): string
+{
+    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    $projectRoot = realpath(__DIR__ . '/..');
+
+    if (!is_string($documentRoot) || !is_string($projectRoot) || $documentRoot === '' || $projectRoot === '') {
+        return '';
+    }
+
+    $normalize = static function (string $path): string {
+        $path = str_replace('\\', '/', $path);
+        return rtrim($path, '/');
+    };
+
+    $doc = strtolower($normalize($documentRoot));
+    $proj = strtolower($normalize($projectRoot));
+    if ($doc === '' || $proj === '' || !str_starts_with($proj, $doc)) {
+        return '';
+    }
+
+    $suffix = substr($normalize($projectRoot), strlen($normalize($documentRoot)));
+    $suffix = str_replace('\\', '/', (string) $suffix);
+    $suffix = trim($suffix, '/');
+
+    if ($suffix === '') {
+        return '';
+    }
+
+    return '/' . $suffix;
+}
+
 function cityzen_base_path(): string
 {
+    $envBase = cityzen_env_base_path();
+    if ($envBase !== '') {
+        return $envBase;
+    }
+
     $script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     $lastSegment = basename($script);
 
@@ -14,10 +62,20 @@ function cityzen_base_path(): string
     $script = str_replace('\\', '/', $script);
 
     if ($script === '.' || $script === '\\' || $script === '/') {
-        return '';
+        return cityzen_project_base_path_from_fs();
     }
 
-    return rtrim($script, '/');
+    $base = rtrim($script, '/');
+
+    // Si Apache sert une URL sans prefixe projet, on retombe sur la detection filesystem.
+    if ($base === '' || $base === '/controller' || $base === '/admin' || $base === '/api') {
+        $detected = cityzen_project_base_path_from_fs();
+        if ($detected !== '') {
+            return $detected;
+        }
+    }
+
+    return $base;
 }
 
 function cityzen_asset(string $path): string

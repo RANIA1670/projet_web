@@ -67,74 +67,111 @@ cityzen_render_head('Statistiques');
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
     margin-bottom: 40px;
 }
 
-.stat-card {
+.stat-circle-card {
     background: white;
-    border-radius: 12px;
-    padding: 25px;
+    border-radius: 20px;
+    padding: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s, box-shadow 0.3s;
-    border-left: 4px solid #007bff;
+    text-align: center;
+    position: relative;
 }
 
-.stat-card:hover {
+.stat-circle-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
 }
 
-.stat-card.primary { border-left-color: #007bff; }
-.stat-card.success { border-left-color: #28a745; }
-.stat-card.warning { border-left-color: #ffc107; }
-.stat-card.danger { border-left-color: #dc3545; }
-.stat-card.info { border-left-color: #17a2b8; }
-.stat-card.secondary { border-left-color: #6c757d; }
+.circle-chart-container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 15px;
+}
 
-.stat-value {
-    font-size: 2.5rem;
+.circle-chart {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--primary-color) 0deg var(--progress-deg),
+        #f0f0f0 var(--progress-deg) 360deg
+    );
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.circle-chart::before {
+    content: '';
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    background: white;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.circle-chart-value {
+    position: absolute;
+    z-index: 2;
+    font-size: 1.8rem;
     font-weight: bold;
-    color: #333;
-    margin-bottom: 10px;
+    color: var(--primary-color);
     line-height: 1;
 }
 
-.stat-label {
-    font-size: 1.1rem;
+.circle-chart-label {
+    font-size: 1rem;
     color: #666;
     margin-bottom: 5px;
-}
-
-.stat-description {
-    font-size: 0.9rem;
-    color: #999;
-}
-
-.stat-change {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
     font-weight: 600;
-    margin-top: 10px;
 }
 
-.stat-change.positive {
+.circle-chart-description {
+    font-size: 0.85rem;
+    color: #999;
+    margin-bottom: 10px;
+}
+
+.circle-change {
+    display: inline-block;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.circle-change.positive {
     background: #d4edda;
     color: #155724;
 }
 
-.stat-change.negative {
+.circle-change.negative {
     background: #f8d7da;
     color: #721c24;
 }
 
-.stat-change.neutral {
+.circle-change.neutral {
     background: #f8f9fa;
     color: #6c757d;
 }
+
+/* Color themes for circles */
+.circle-primary { --primary-color: #007bff; }
+.circle-success { --primary-color: #28a745; }
+.circle-warning { --primary-color: #ffc107; }
+.circle-danger { --primary-color: #dc3545; }
+.circle-info { --primary-color: #17a2b8; }
+.circle-secondary { --primary-color: #6c757d; }
 
 .charts-section {
     display: grid;
@@ -390,47 +427,102 @@ cityzen_render_head('Statistiques');
         </div>
     </div>
 
-    <!-- Cartes de statistiques principales -->
+    <!-- Cartes de statistiques principales sous forme de cercles -->
     <div class="stats-grid">
-        <div class="stat-card primary">
-            <div class="stat-value"><?= number_format($stats['basic_stats']['total_users']) ?></div>
-            <div class="stat-label">Total des utilisateurs</div>
-            <div class="stat-description">Tous les comptes enregistrés</div>
+        <div class="stat-circle-card circle-primary">
+            <div class="circle-chart-container">
+                <?php 
+                $totalUsers = $stats['basic_stats']['total_users'];
+                $maxUsers = max($totalUsers, 1);
+                $percentage = ($totalUsers / $maxUsers) * 100;
+                $degrees = ($percentage / 100) * 360;
+                ?>
+                <div class="circle-chart" style="--progress-deg: <?= $degrees ?>deg;">
+                    <div class="circle-chart-value"><?= number_format($totalUsers) ?></div>
+                </div>
+            </div>
+            <div class="circle-chart-label">Total des utilisateurs</div>
+            <div class="circle-chart-description">Tous les comptes enregistrés</div>
             <?php if ($stats['growth_stats']['growth_rate'] !== 0): ?>
-                <div class="stat-change <?= $stats['growth_stats']['growth_rate'] > 0 ? 'positive' : ($stats['growth_stats']['growth_rate'] < 0 ? 'negative' : 'neutral') ?>">
+                <div class="circle-change <?= $stats['growth_stats']['growth_rate'] > 0 ? 'positive' : ($stats['growth_stats']['growth_rate'] < 0 ? 'negative' : 'neutral') ?>">
                     <?= $stats['growth_stats']['growth_rate'] > 0 ? '+' : '' ?><?= $stats['growth_stats']['growth_rate'] ?>% vs période précédente
                 </div>
             <?php endif; ?>
         </div>
 
-        <div class="stat-card success">
-            <div class="stat-value"><?= number_format($stats['basic_stats']['total_regular_users']) ?></div>
-            <div class="stat-label">Utilisateurs actifs</div>
-            <div class="stat-description">Comptes utilisateurs standards</div>
+        <div class="stat-circle-card circle-success">
+            <div class="circle-chart-container">
+                <?php 
+                $regularUsers = $stats['basic_stats']['total_regular_users'];
+                $percentage = ($totalUsers > 0) ? ($regularUsers / $totalUsers) * 100 : 0;
+                $degrees = ($percentage / 100) * 360;
+                ?>
+                <div class="circle-chart" style="--progress-deg: <?= $degrees ?>deg;">
+                    <div class="circle-chart-value"><?= number_format($regularUsers) ?></div>
+                </div>
+            </div>
+            <div class="circle-chart-label">Utilisateurs actifs</div>
+            <div class="circle-chart-description">Comptes utilisateurs standards</div>
         </div>
 
-        <div class="stat-card warning">
-            <div class="stat-value"><?= number_format($stats['basic_stats']['total_admins']) ?></div>
-            <div class="stat-label">Administrateurs</div>
-            <div class="stat-description">Comptes avec privilèges admin</div>
+        <div class="stat-circle-card circle-warning">
+            <div class="circle-chart-container">
+                <?php 
+                $admins = $stats['basic_stats']['total_admins'];
+                $percentage = ($totalUsers > 0) ? ($admins / $totalUsers) * 100 : 0;
+                $degrees = ($percentage / 100) * 360;
+                ?>
+                <div class="circle-chart" style="--progress-deg: <?= $degrees ?>deg;">
+                    <div class="circle-chart-value"><?= number_format($admins) ?></div>
+                </div>
+            </div>
+            <div class="circle-chart-label">Administrateurs</div>
+            <div class="circle-chart-description">Comptes avec privilèges admin</div>
         </div>
 
-        <div class="stat-card danger">
-            <div class="stat-value"><?= number_format($stats['basic_stats']['total_blocked']) ?></div>
-            <div class="stat-label">Comptes bloqués</div>
-            <div class="stat-description">Accès désactivé</div>
+        <div class="stat-circle-card circle-danger">
+            <div class="circle-chart-container">
+                <?php 
+                $blocked = $stats['basic_stats']['total_blocked'];
+                $percentage = ($totalUsers > 0) ? ($blocked / $totalUsers) * 100 : 0;
+                $degrees = ($percentage / 100) * 360;
+                ?>
+                <div class="circle-chart" style="--progress-deg: <?= $degrees ?>deg;">
+                    <div class="circle-chart-value"><?= number_format($blocked) ?></div>
+                </div>
+            </div>
+            <div class="circle-chart-label">Comptes bloqués</div>
+            <div class="circle-chart-description">Accès désactivé</div>
         </div>
 
-        <div class="stat-card info">
-            <div class="stat-value"><?= number_format($stats['basic_stats']['with_photos']) ?></div>
-            <div class="stat-label">Avec photo de profil</div>
-            <div class="stat-description">Utilisateurs avec avatar</div>
+        <div class="stat-circle-card circle-info">
+            <div class="circle-chart-container">
+                <?php 
+                $withPhotos = $stats['basic_stats']['with_photos'];
+                $percentage = ($totalUsers > 0) ? ($withPhotos / $totalUsers) * 100 : 0;
+                $degrees = ($percentage / 100) * 360;
+                ?>
+                <div class="circle-chart" style="--progress-deg: <?= $degrees ?>deg;">
+                    <div class="circle-chart-value"><?= number_format($withPhotos) ?></div>
+                </div>
+            </div>
+            <div class="circle-chart-label">Avec photo de profil</div>
+            <div class="circle-chart-description">Utilisateurs avec avatar</div>
         </div>
 
-        <div class="stat-card secondary">
-            <div class="stat-value"><?= number_format($stats['basic_stats']['with_qr_codes']) ?></div>
-            <div class="stat-label">Avec QR code</div>
-            <div class="stat-description">QR codes générés</div>
+        <div class="stat-circle-card circle-secondary">
+            <div class="circle-chart-container">
+                <?php 
+                $withQr = $stats['basic_stats']['with_qr_codes'];
+                $percentage = ($totalUsers > 0) ? ($withQr / $totalUsers) * 100 : 0;
+                $degrees = ($percentage / 100) * 360;
+                ?>
+                <div class="circle-chart" style="--progress-deg: <?= $degrees ?>deg;">
+                    <div class="circle-chart-value"><?= number_format($withQr) ?></div>
+                </div>
+            </div>
+            <div class="circle-chart-label">Avec QR code</div>
+            <div class="circle-chart-description">QR codes générés</div>
         </div>
     </div>
 
@@ -574,14 +666,50 @@ setInterval(() => {
     // Optional: implement auto-refresh without page reload using AJAX
 }, 300000);
 
-// Animate numbers on page load
+// Animate circles and numbers on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const statValues = document.querySelectorAll('.stat-value');
-    statValues.forEach(element => {
+    // Animate circle charts
+    const circleCharts = document.querySelectorAll('.circle-chart');
+    circleCharts.forEach((chart, index) => {
+        const targetDegrees = parseFloat(chart.style.getPropertyValue('--progress-deg'));
+        chart.style.setProperty('--progress-deg', '0deg');
+        
+        setTimeout(() => {
+            chart.style.transition = 'all 1.5s ease-out';
+            chart.style.setProperty('--progress-deg', targetDegrees + 'deg');
+        }, index * 200);
+    });
+    
+    // Animate numbers in circles
+    const circleValues = document.querySelectorAll('.circle-chart-value');
+    circleValues.forEach((element, index) => {
         const finalValue = parseInt(element.textContent.replace(/[^0-9]/g, ''));
         if (!isNaN(finalValue)) {
-            animateValue(element, 0, finalValue, 1000);
+            element.textContent = '0';
+            setTimeout(() => {
+                animateValue(element, 0, finalValue, 1500);
+            }, index * 200);
         }
+    });
+    
+    // Add hover effects for circles
+    const statCards = document.querySelectorAll('.stat-circle-card');
+    statCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            const chart = this.querySelector('.circle-chart');
+            if (chart) {
+                chart.style.transform = 'scale(1.05)';
+                chart.style.filter = 'brightness(1.1)';
+            }
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            const chart = this.querySelector('.circle-chart');
+            if (chart) {
+                chart.style.transform = 'scale(1)';
+                chart.style.filter = 'brightness(1)';
+            }
+        });
     });
 });
 

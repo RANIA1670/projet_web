@@ -194,6 +194,334 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  const initVoiceToText = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof SpeechRecognition !== 'function') {
+      return;
+    }
+
+    const langStorageKey = 'cityzen_vtt_lang';
+    const supportedInputTypes = new Set(['text', 'search', 'email', 'tel', 'url']);
+    const languageChoices = [
+      { code: 'fr-FR', label: 'Francais (FR)' },
+      { code: 'fr-CA', label: 'Francais (CA)' },
+      { code: 'en-US', label: 'English (US)' },
+      { code: 'ar-MA', label: 'Arabic (MA)' },
+    ];
+
+    let activeSession = null;
+    let languageCode = window.localStorage.getItem(langStorageKey) || 'fr-FR';
+    if (!languageChoices.some((item) => item.code === languageCode)) {
+      languageCode = 'fr-FR';
+    }
+
+    const punctuationRules = [
+      { pattern: /\bretour a la ligne\b/gi, replacement: '\n' },
+      { pattern: /\bnouvelle ligne\b/gi, replacement: '\n' },
+      { pattern: /\bpoint d interrogation\b/gi, replacement: '?' },
+      { pattern: /\bpoint d exclamation\b/gi, replacement: '!' },
+      { pattern: /\bdeux points\b/gi, replacement: ':' },
+      { pattern: /\bpoint virgule\b/gi, replacement: ';' },
+      { pattern: /\bvirgule\b/gi, replacement: ',' },
+      { pattern: /\bpoint\b/gi, replacement: '.' },
+      { pattern: /\barobase\b/gi, replacement: '@' },
+      { pattern: /\btiret\b/gi, replacement: '-' },
+    ];
+
+    const normalizeTranscript = (rawText) => {
+      let normalized = rawText.trim();
+      punctuationRules.forEach((rule) => {
+        normalized = normalized.replace(rule.pattern, rule.replacement);
+      });
+      normalized = normalized.replace(/\s+([,.;:!?])/g, '$1');
+      normalized = normalized.replace(/([,.;:!?])([^\s])/g, '$1 $2');
+      normalized = normalized.replace(/\s*\n\s*/g, '\n');
+      normalized = normalized.replace(/[ \t]{2,}/g, ' ');
+      return normalized.trim();
+    };
+
+    const isEligibleField = (field) => {
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
+        return false;
+      }
+      if (field.disabled || field.readOnly) {
+        return false;
+      }
+      if (field.dataset.vtt === 'off') {
+        return false;
+      }
+
+      if (field instanceof HTMLTextAreaElement) {
+        return true;
+      }
+
+      const type = (field.type || 'text').toLowerCase();
+      return supportedInputTypes.has(type);
+    };
+
+    const insertAtCursor = (field, text) => {
+      const start = field.selectionStart ?? field.value.length;
+      const end = field.selectionEnd ?? field.value.length;
+      const left = field.value.slice(0, start);
+      const right = field.value.slice(end);
+
+      const needsSpaceBefore = left !== '' && !/[ \n\t]$/.test(left) && text[0] !== '\n';
+      const needsSpaceAfter = right !== '' && !/^[ \n\t]/.test(right) && text[text.length - 1] !== '\n';
+      const chunk = `${needsSpaceBefore ? ' ' : ''}${text}${needsSpaceAfter ? ' ' : ''}`;
+      const nextValue = `${left}${chunk}${right}`;
+      const nextCaret = (left + chunk).length;
+
+      field.value = nextValue;
+      if (typeof field.setSelectionRange === 'function') {
+        field.setSelectionRange(nextCaret, nextCaret);
+      }
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    const setSessionState = (button, listening) => {
+      button.classList.toggle('is-listening', listening);
+      button.setAttribute('aria-pressed', String(listening));
+      button.setAttribute('aria-label', listening ? 'Arreter la dictee vocale' : 'Demarrer la dictee vocale');
+      button.title = listening ? 'Arreter la dictee vocale (Alt+M)' : 'Demarrer la dictee vocale (Alt+M)';
+    };
+
+    const stopActiveSession = (notifyMessage = '') => {
+      if (!activeSession) {
+        return;
+      }
+
+      const { recognition, button, field, silenceTimer } = activeSession;
+      window.clearTimeout(silenceTimer);
+      activeSession.running = false;
+
+      try {
+        recognition.stop();
+      } catch (error) {
+        // ignore stop errors triggered by race conditions
+      }
+
+      setSessionState(button, false);
+      field.classList.remove('is-vtt-active');
+      activeSession = null;
+
+      if (notifyMessage !== '') {
+        showToast(notifyMessage);
+      }
+    };
+
+    const resetSilenceTimeout = (field, button, recognition) => {
+      if (!activeSession || activeSession.field !== field) {
+        return;
+      }
+
+      window.clearTimeout(activeSession.silenceTimer);
+      activeSession.silenceTimer = window.setTimeout(() => {
+        if (!activeSession || activeSession.field !== field) {
+          return;
+        }
+        activeSession.running = false;
+        try {
+          recognition.stop();
+        } catch (error) {
+          // ignore stop errors
+        }
+        setSessionState(button, false);
+        field.classList.remove('is-vtt-active');
+        activeSession = null;
+        showToast('Dictee arretee (silence detecte).');
+      }, 12000);
+    };
+
+    const startSession = (field, button) => {
+      if (activeSession && activeSession.field !== field) {
+        stopActiveSession();
+      }
+
+      if (activeSession && activeSession.field === field) {
+        stopActiveSession('Dictee arretee.');
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = languageCode;
+      recognition.interimResults = true;
+      recognition.continuous = true;
+      recognition.maxAlternatives = 1;
+
+      const session = {
+        field,
+        button,
+        recognition,
+        running: true,
+        silenceTimer: 0,
+      };
+      activeSession = session;
+
+      recognition.onstart = () => {
+        if (!activeSession || activeSession.field !== field) {
+          return;
+        }
+        setSessionState(button, true);
+        field.classList.add('is-vtt-active');
+        showToast(`Dictee active (${languageCode}).`);
+        resetSilenceTimeout(field, button, recognition);
+      };
+
+      recognition.onresult = (event) => {
+        if (!activeSession || activeSession.field !== field) {
+          return;
+        }
+
+        let finalText = '';
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const spoken = event.results[i][0]?.transcript || '';
+          if (event.results[i].isFinal) {
+            finalText += `${spoken} `;
+          }
+        }
+
+        const normalized = normalizeTranscript(finalText);
+        if (normalized !== '') {
+          insertAtCursor(field, normalized);
+        }
+
+        resetSilenceTimeout(field, button, recognition);
+      };
+
+      recognition.onerror = (event) => {
+        if (!activeSession || activeSession.field !== field) {
+          return;
+        }
+
+        const blocked = event.error === 'not-allowed' || event.error === 'service-not-allowed';
+        const message = blocked
+          ? 'Micro non autorise. Activez la permission du navigateur.'
+          : `Dictee indisponible (${event.error}).`;
+        showToast(message);
+        stopActiveSession();
+      };
+
+      recognition.onend = () => {
+        if (!activeSession || activeSession.field !== field) {
+          return;
+        }
+
+        if (activeSession.running) {
+          try {
+            recognition.start();
+            return;
+          } catch (error) {
+            // If restart fails, fall through and stop cleanly.
+          }
+        }
+
+        setSessionState(button, false);
+        field.classList.remove('is-vtt-active');
+        window.clearTimeout(activeSession.silenceTimer);
+        activeSession = null;
+      };
+
+      try {
+        recognition.start();
+      } catch (error) {
+        showToast('Impossible de demarrer la dictee.');
+        stopActiveSession();
+      }
+    };
+
+    const createLanguagePanel = () => {
+      const panel = document.createElement('div');
+      panel.className = 'cityzen-vtt-panel';
+
+      const label = document.createElement('label');
+      label.className = 'cityzen-vtt-label';
+      label.textContent = 'Dictee vocale';
+      label.htmlFor = 'cityzen-vtt-lang';
+
+      const select = document.createElement('select');
+      select.id = 'cityzen-vtt-lang';
+      select.className = 'cityzen-vtt-select';
+      select.setAttribute('aria-label', 'Langue de dictee vocale');
+
+      languageChoices.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.code;
+        option.textContent = item.label;
+        option.selected = item.code === languageCode;
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', () => {
+        languageCode = select.value;
+        window.localStorage.setItem(langStorageKey, languageCode);
+        showToast(`Langue vocale: ${languageCode}`);
+      });
+
+      const hint = document.createElement('p');
+      hint.className = 'cityzen-vtt-hint';
+      hint.textContent = 'Raccourci: Alt+M';
+
+      panel.append(label, select, hint);
+      document.body.appendChild(panel);
+    };
+
+    const bindVoiceButton = (field) => {
+      if (!isEligibleField(field) || field.dataset.vttReady === '1') {
+        return;
+      }
+
+      const wrapper = document.createElement('span');
+      wrapper.className = 'cityzen-vtt-field';
+      field.parentNode?.insertBefore(wrapper, field);
+      wrapper.appendChild(field);
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'cityzen-vtt-btn';
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', 'Demarrer la dictee vocale');
+      button.title = 'Demarrer la dictee vocale (Alt+M)';
+      button.textContent = 'Mic';
+
+      button.addEventListener('click', () => {
+        startSession(field, button);
+      });
+
+      wrapper.appendChild(button);
+      field.dataset.vttReady = '1';
+    };
+
+    const voiceFields = [...document.querySelectorAll('input, textarea')].filter((field) => isEligibleField(field));
+    if (!voiceFields.length) {
+      return;
+    }
+
+    voiceFields.forEach((field) => {
+      bindVoiceButton(field);
+    });
+    createLanguagePanel();
+
+    document.addEventListener('keydown', (event) => {
+      if (!event.altKey || event.key.toLowerCase() !== 'm') {
+        return;
+      }
+
+      const focused = document.activeElement;
+      if (!isEligibleField(focused)) {
+        return;
+      }
+
+      const button = focused.parentElement?.querySelector('.cityzen-vtt-btn');
+      if (!button) {
+        return;
+      }
+
+      event.preventDefault();
+      button.click();
+    });
+  };
+
   const backToTop = document.createElement('button');
   backToTop.type = 'button';
   backToTop.className = 'back-to-top';
@@ -213,5 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', handleBackToTop, { passive: true });
   handleBackToTop();
 
+  initVoiceToText();
   filterReports();
 });

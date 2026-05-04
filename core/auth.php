@@ -14,16 +14,30 @@ function cityzen_session_start(): void
 
 function cityzen_find_user_by_login(?string $user): ?array
 {
-    if ($user === null || $user === '') {
+    if ($user === null) {
+        return null;
+    }
+    $user = trim($user);
+    if ($user === '') {
         return null;
     }
 
     try {
         $pdo = cityzen_db();
         $stmt = $pdo->prepare(
-            'SELECT id, username, full_name, email, birth_date, postal_code, city, phone, profile_photo, password_hash, role, blocked, created_at, updated_at FROM users WHERE username = ? OR email = ? LIMIT 1'
+            'SELECT id, username, full_name, email, birth_date, postal_code, city, phone, profile_photo, password_hash, role, blocked, created_at, updated_at
+             FROM users
+             WHERE username = ? OR email = ? OR full_name = ?
+             ORDER BY
+                CASE
+                    WHEN username = ? THEN 0
+                    WHEN email = ? THEN 1
+                    WHEN full_name = ? THEN 2
+                    ELSE 3
+                END
+             LIMIT 1'
         );
-        $stmt->execute([$user, $user]);
+        $stmt->execute([$user, $user, $user, $user, $user, $user]);
         $row = $stmt->fetch();
 
         return is_array($row) ? $row : null;

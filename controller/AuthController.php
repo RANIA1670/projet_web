@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\View;
 use App\Helpers\MailService;
+use App\Helpers\PasswordResetService;
 use App\Models\UserModel;
 
 final class AuthController extends Controller
@@ -18,11 +19,13 @@ final class AuthController extends Controller
 
     private UserModel $userModel;
     private MailService $mailService;
+    private PasswordResetService $passwordResetService;
 
-    public function __construct(?UserModel $userModel = null, ?MailService $mailService = null)
+    public function __construct(?UserModel $userModel = null, ?MailService $mailService = null, ?PasswordResetService $passwordResetService = null)
     {
         $this->userModel = $userModel ?? new UserModel();
         $this->mailService = $mailService ?? new MailService();
+        $this->passwordResetService = $passwordResetService ?? new PasswordResetService();
     }
 
     public function login(): void
@@ -52,8 +55,8 @@ final class AuthController extends Controller
                     $errors['user'] = 'Saisissez votre email ou votre nom d\'utilisateur.';
                 } elseif (\str_contains($user, '@') && !filter_var($user, FILTER_VALIDATE_EMAIL)) {
                     $errors['user'] = 'Format d\'email invalide.';
-                } elseif (!\str_contains($user, '@') && !preg_match('/^[a-zA-Z0-9_]{3,32}$/', $user)) {
-                    $errors['user'] = 'Nom d\'utilisateur invalide (3-32, lettres/chiffres/underscore).';
+                } elseif (!\str_contains($user, '@') && mb_strlen($user) > 120) {
+                    $errors['user'] = 'Identifiant trop long.';
                 }
 
                 if ($pass === '') {
@@ -344,6 +347,290 @@ final class AuthController extends Controller
             $_SESSION[self::REGISTER_QR_SESSION_VALIDATED],
             $_SESSION[self::REGISTER_QR_SESSION_VALIDATED_AT]
         );
+    }
+
+    public function forgotPasswordNew(): void
+    {
+        $error = '';
+        $success = '';
+        $errors = [];
+        $old = ['email' => '', 'phone' => ''];
+
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+            if (!\cityzen_csrf_validate($_POST['csrf'] ?? null)) {
+                $error = 'Session expirÃ©e : rechargez la page puis rÃ©essayez.';
+            } else {
+                $method = (string) ($_POST['method'] ?? 'email');
+                $contact = '';
+                
+                if ($method === 'email') {
+                    $contact = trim((string) ($_POST['email'] ?? ''));
+                    $old['email'] = $contact;
+                    
+                    if (!filter_var($contact, FILTER_VALIDATE_EMAIL) || mb_strlen($contact) > 190) {
+                        $errors['email'] = 'Email invalide.';
+                    }
+                } else {
+                    $contact = trim((string) ($_POST['phone'] ?? ''));
+                    $old['phone'] = $contact;
+                    
+                    if (!preg_match('/^(\+?\d{1,3}[-\s]?)?\d{9,15}$/', $contact)) {
+                        $errors['phone'] = 'NumÃ©ro de tÃ©lÃ©phone invalide.';
+                    }
+                }
+
+                if ($errors !== []) {
+                    $error = 'Corrigez les champs en erreur.';
+                } else {
+                    // Trouver l'utilisateur
+                    $userResult = \cityzen_find_user_by_email_or_phone($contact);
+                    
+                    if (!$userResult['ok']) {
+                        $error = 'Aucun compte trouvÃ© avec cet identifiant.';
+                    } else {
+                        $user = $userResult['user'];
+                        
+                        // CrÃ©er le code de rÃ©initialisation
+                        $resetResult = \cityzen_create_password_reset_code(
+                            (int) $user['id'], 
+                            $method, 
+                            $contact
+                        );
+                        
+                        if (!$resetResult['ok']) {
+                            $error = 'Erreur lors de la crÃ©ation du code: ' . $resetResult['error'];
+                        } else {
+                            $code = $resetResult['code'];
+                            
+                            // Envoyer le code
+                            if ($method === 'email') {
+                                $sendResult = $this->passwordResetService->sendResetCodeByEmail(
+                                    $contact, 
+                                    $code, 
+                                    $user['username']
+                                );
+                            } else {
+                                $sendResult = $this->passwordResetService->sendResetCodeBySMS(
+                                    $contact, 
+                                    $code
+                                );
+                            }
+                            
+                            if ($sendResult['ok']) {
+                                // Stocker les infos en session pour la prochaine Ã©tape
+                                $_SESSION['reset_user_id'] = $user['id'];
+                                $_SESSION['reset_code'] = $code;
+                                $_SESSION['reset_contact'] = $contact;
+                                $_SESSION['reset_method'] = $method;
+                                $_SESSION['reset_username'] = (string) ($user['username'] ?? '');
+                                
+                                $this->redirect(\cityzen_asset('controller/verify_reset_code.php'));
+                                return;
+                            } else {
+                                $error = $sendResult['error'];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        View::render('auth/forgot_password_new', [
+            'error' => $error,
+            'errors' => $errors,
+            'old' => $old,
+            'success' => $success,
+        ]);
+    }
+
+    public function verifyResetCode(): void
+    {
+        $error = '';
+        $user = null;
+        $timeLeft = 900; // 15 minutes
+
+        // VÃ©rifier si on vient de la page de demande
+        if (isset($_SESSION['reset_code']) && isset($_SESSION['reset_user_id'])) {
+            $user = [
+                'id' => $_SESSION['reset_user_id'],
+                'username' => (string) ($_SESSION['reset_username'] ?? ''),
+                'contact' => $_SESSION['reset_contact']
+            ];
+        }
+
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+            if (!\cityzen_csrf_validate($_POST['csrf'] ?? null)) {
+                $error = 'Session expirÃ©e : rechargez la page puis rÃ©essayez.';
+            } else {
+                $code = (string) ($_POST['code'] ?? '');
+                
+                if (mb_strlen($code) !== 6 || !ctype_digit($code)) {
+                    $error = 'Le code doit contenir 6 chiffres.';
+                } else {
+                    // VÃ©rifier le code
+                    $verifyResult = \cityzen_verify_reset_code($code);
+                    
+                    if (!$verifyResult['ok']) {
+                        $error = $verifyResult['error'];
+                    } else {
+                        $reset = $verifyResult['reset'];
+                        $user = [
+                            'id' => $reset['user_id'],
+                            'username' => $reset['username'],
+                            'contact' => $reset['contact']
+                        ];
+                        
+                        
+                        // Stocker les infos pour la rÃ©initialisation
+                        $_SESSION['reset_verified'] = true;
+                        $_SESSION['reset_user_id'] = $reset['user_id'];
+                        $_SESSION['reset_code'] = $code;
+                        
+                        $this->redirect(\cityzen_asset('controller/reset_password.php') . '?code=' . $code);
+                        return;
+                    }
+                }
+            }
+        }
+
+        View::render('auth/verify_reset_code', [
+            'error' => $error,
+            'user' => $user,
+            'timeLeft' => $timeLeft,
+        ]);
+    }
+
+    public function resetPassword(): void
+    {
+        $error = '';
+        $errors = [];
+        $old = ['password' => '', 'password2' => ''];
+        $user = null;
+        $code = trim((string) ($_GET['code'] ?? $_POST['code'] ?? ($_SESSION['reset_code'] ?? '')));
+
+        // VÃ©rifier si le code est valide
+        if ($code !== '') {
+            $verifyResult = \cityzen_verify_reset_code($code);
+            if ($verifyResult['ok']) {
+                $reset = $verifyResult['reset'];
+                $user = [
+                    'id' => $reset['user_id'],
+                    'username' => $reset['username'],
+                    'email' => $reset['email'],
+                    'phone' => $reset['phone']
+                ];
+            } else {
+                $error = 'Code invalide ou expirÃ©. Veuillez demander un nouveau code.';
+            }
+        } else {
+            $error = 'Code de rÃ©initialisation manquant.';
+        }
+
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && $user !== null) {
+            if (!\cityzen_csrf_validate($_POST['csrf'] ?? null)) {
+                $error = 'Session expirÃ©e : rechargez la page puis rÃ©essayez.';
+            } else {
+                $password = (string) ($_POST['password'] ?? '');
+                $password2 = (string) ($_POST['password2'] ?? '');
+                $old['password'] = $password;
+                $old['password2'] = $password2;
+
+                if (mb_strlen($password) < 8) {
+                    $errors['password'] = 'Le mot de passe doit contenir au moins 8 caractÃ¨res.';
+                } elseif (!preg_match('/[A-Za-z]/', $password) || !preg_match('/\\d/', $password)) {
+                    $errors['password'] = 'Le mot de passe doit contenir au moins 1 lettre et 1 chiffre.';
+                }
+
+                if ($password !== $password2) {
+                    $errors['password2'] = 'Les mots de passe ne correspondent pas.';
+                }
+
+                if ($errors !== []) {
+                    $error = 'Corrigez les champs en erreur.';
+                } else {
+                    // Mettre Ã  jour le mot de passe
+                    $updateResult = \cityzen_update_user_password((int) $user['id'], $password);
+                    
+                    if ($updateResult['ok']) {
+                        \cityzen_mark_reset_code_used($code);
+
+                        // Envoyer une notification de confirmation
+                        $this->sendPasswordResetConfirmationEmail($user['email'], $user['username']);
+                        
+                        // Nettoyer la session
+                        unset(
+                            $_SESSION['reset_verified'],
+                            $_SESSION['reset_user_id'],
+                            $_SESSION['reset_code'],
+                            $_SESSION['reset_contact'],
+                            $_SESSION['reset_method'],
+                            $_SESSION['reset_username']
+                        );
+                        
+                        View::render('auth/reset_password', [
+                            'error' => '',
+                            'errors' => [],
+                            'old' => $old,
+                            'user' => $user,
+                            'code' => $code,
+                            'success' => true,
+                        ]);
+                        return;
+                    } else {
+                        $error = 'Erreur lors de la mise Ã  jour du mot de passe: ' . $updateResult['error'];
+                    }
+                }
+            }
+        }
+
+        View::render('auth/reset_password', [
+            'error' => $error,
+            'errors' => $errors,
+            'old' => $old,
+            'user' => $user,
+            'code' => $code,
+        ]);
+    }
+
+    private function sendPasswordResetConfirmationEmail(string $email, string $username): array
+    {
+        try {
+            $subject = 'CityZen - Mot de passe rÃ©initialisÃ©';
+            $message = "
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #28a745; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>ðŸ›ï¸ CityZen</h1>
+            <h2>Mot de passe rÃ©initialisÃ©</h2>
+        </div>
+        <div class='content'>
+            <p>Bonjour <strong>{$username}</strong>,</p>
+            <p>Votre mot de passe CityZen a Ã©tÃ© rÃ©initialisÃ© avec succÃ¨s.</p>
+            <p>Si vous n'avez pas effectuÃ© cette action, contactez immÃ©diatement le support.</p>
+            <p>Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p>
+        </div>
+        <div class='footer'>
+            <p>Cet email a Ã©tÃ© envoyÃ© automatiquement. Merci de ne pas rÃ©pondre.</p>
+            <p>Â© 2024 CityZen - Service Citoyen</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            return $this->mailService->send($email, $subject, $message);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'error' => 'Erreur: ' . $e->getMessage()];
+        }
     }
 
     private function qrImageUrlFor(string $targetUrl): string

@@ -103,6 +103,31 @@ function cityzen_db_ensure_schema(PDO $pdo): void
     if (!cityzen_db_index_exists($pdo, 'users', 'uq_users_qr_token')) {
         $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uq_users_qr_token (qr_token)');
     }
+
+    // Créer la table pour les codes de réinitialisation
+    cityzen_db_ensure_password_reset_table($pdo);
+}
+
+function cityzen_db_ensure_password_reset_table(PDO $pdo): void
+{
+    $pdo->exec('
+        CREATE TABLE IF NOT EXISTS password_reset_codes (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id INT UNSIGNED NOT NULL,
+            code VARCHAR(6) NOT NULL,
+            type ENUM("email", "sms") NOT NULL,
+            contact VARCHAR(255) NOT NULL COMMENT "email or phone number",
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_reset_code (code),
+            KEY idx_user_id (user_id),
+            KEY idx_expires_at (expires_at),
+            KEY idx_contact_type (contact, type),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ');
 }
 
 function cityzen_db_seed_if_empty(PDO $pdo): void
@@ -429,5 +454,118 @@ function cityzen_detailed_stats(?string $dateFilter = null, ?string $categoryFil
             'date_filter' => $dateFilter,
             'error' => $e->getMessage(),
         ];
+    }
+}
+
+// Fonctions pour la gestion des codes de réinitialisation de mot de passe
+function cityzen_generate_reset_code(): string
+{
+    return sprintf('%06d', mt_rand(0, 999999));
+}
+
+function cityzen_create_password_reset_code(int $userId, string $type, string $contact): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        // Nettoyer les anciens codes non utilisés pour cet utilisateur
+        $pdo->prepare('DELETE FROM password_reset_codes WHERE user_id = ? AND used_at IS NULL AND expires_at < NOW()')->execute([$userId]);
+        
+        $code = cityzen_generate_reset_code();
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+        
+        $stmt = $pdo->prepare('
+            INSERT INTO password_reset_codes (user_id, code, type, contact, expires_at) 
+            VALUES (?, ?, ?, ?, ?)
+        ');
+        
+        if ($stmt->execute([$userId, $code, $type, $contact, $expiresAt])) {
+            return ['ok' => true, 'code' => $code, 'expires_at' => $expiresAt];
+        }
+        
+        return ['ok' => false, 'error' => 'Erreur lors de la création du code.'];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur base de données: ' . $e->getMessage()];
+    }
+}
+
+function cityzen_verify_reset_code(string $code): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        $stmt = $pdo->prepare('
+            SELECT prc.*, u.username, u.email, u.phone 
+            FROM password_reset_codes prc
+            JOIN users u ON prc.user_id = u.id
+            WHERE prc.code = ? AND prc.used_at IS NULL AND prc.expires_at > NOW()
+            ORDER BY prc.created_at DESC
+            LIMIT 1
+        ');
+        
+        $stmt->execute([$code]);
+        $result = $stmt->fetch();
+        
+        if ($result) {
+            return ['ok' => true, 'reset' => $result];
+        }
+        
+        return ['ok' => false, 'error' => 'Code invalide ou expiré.'];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur base de données: ' . $e->getMessage()];
+    }
+}
+
+function cityzen_mark_reset_code_used(string $code): bool
+{
+    try {
+        $pdo = cityzen_db();
+        $stmt = $pdo->prepare('UPDATE password_reset_codes SET used_at = NOW() WHERE code = ?');
+        return $stmt->execute([$code]);
+    } catch (Throwable) {
+        return false;
+    }
+}
+
+function cityzen_find_user_by_email_or_phone(string $identifier): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        $stmt = $pdo->prepare('
+            SELECT id, username, email, phone, full_name 
+            FROM users 
+            WHERE email = ? OR phone = ? OR username = ?
+            LIMIT 1
+        ');
+        
+        $stmt->execute([$identifier, $identifier, $identifier]);
+        $user = $stmt->fetch();
+        
+        if ($user) {
+            return ['ok' => true, 'user' => $user];
+        }
+        
+        return ['ok' => false, 'error' => 'Aucun utilisateur trouvé avec cet identifiant.'];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur base de données: ' . $e->getMessage()];
+    }
+}
+
+function cityzen_update_user_password(int $userId, string $newPassword): array
+{
+    try {
+        $pdo = cityzen_db();
+        $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+        
+        $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+        
+        if ($stmt->execute([$hash, $userId])) {
+            return ['ok' => true];
+        }
+        
+        return ['ok' => false, 'error' => 'Erreur lors de la mise à jour du mot de passe.'];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur base de données: ' . $e->getMessage()];
     }
 }

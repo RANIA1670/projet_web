@@ -21,7 +21,7 @@ $old = is_array($old ?? null) ? $old : [];
   <main class="page public-page">
     <section class="login-panel">
       <h1>Connexion</h1>
-      <p class="login-lead">Les comptes sont ceux crees sur la page d'inscription (fichier local). Les administrateurs accedent au tableau de bord ; les citoyens au site public.</p>
+      <p class="login-lead">Les comptes sont ceux crees sur la page d'inscription. Les administrateurs accedent au tableau de bord ; les citoyens au site public.</p>
 
       <?php if ($error !== ''): ?>
         <p class="login-error" role="alert"><?= htmlspecialchars($error) ?></p>
@@ -31,7 +31,7 @@ $old = is_array($old ?? null) ? $old : [];
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(cityzen_csrf_token()) ?>">
         <input type="hidden" name="next" value="<?= htmlspecialchars($next) ?>">
         <label class="login-field">
-          <span>Email ou nom d'utilisateur</span>
+          <span>Email, nom d'utilisateur ou nom complet</span>
           <input type="text" name="user" autocomplete="username" required value="<?= htmlspecialchars((string) ($old['user'] ?? '')) ?>">
           <?php if (isset($errors['user'])): ?><small class="login-error" role="alert"><?= htmlspecialchars((string) $errors['user']) ?></small><?php endif; ?>
         </label>
@@ -42,13 +42,12 @@ $old = is_array($old ?? null) ? $old : [];
         </label>
         <button type="submit" class="login-submit">Se connecter</button>
       </form>
-      <p class="login-footer-link"><a href="<?= htmlspecialchars(cityzen_asset('controller/forgot_password.php')) ?>">Mot de passe oublie ?</a></p>
+      <p class="login-footer-link"><a href="<?= htmlspecialchars(cityzen_asset('controller/forgot_password_new.php')) ?>">Mot de passe oublie ?</a></p>
 
       <p class="login-footer-link">Pas encore de compte ? <a href="<?= htmlspecialchars(cityzen_asset('register.php')) ?>">S'inscrire</a></p>
 
-      <p class="login-hint">Premier lancement : un compte admin demo est cree dans <code>storage/users.json</code> (identifiants historiques <code>agent</code> / <code>cityzen</code> si vous n'avez pas defini les variables d'environnement).</p>
+      <p class="login-hint">Astuce : vous pouvez vous connecter avec votre email, votre nom d'utilisateur, ou votre nom complet exactement comme enregistre.</p>
     </section>
   </main>
 </div>
 <?php cityzen_render_footer(); ?>
-
