@@ -1,6 +1,7 @@
 <?php
 /**
- * CityZen - User Model
+ * CityZen - UserModel
+ * Propriétés uniquement. Logique métier → UserService.
  */
 
 require_once APP_PATH . 'core/Model.php';
@@ -8,30 +9,25 @@ require_once APP_PATH . 'core/Model.php';
 class UserModel extends Model
 {
     protected string $table = 'users';
+    protected array $attributes = [];
 
-    public function findByEmail(string $email): ?array
+    public function getAttribute(string $key): mixed
     {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
-        $stmt->execute([':email' => $email]);
-        $result = $stmt->fetch();
-        return $result ?: null;
+        return $this->attributes[$key] ?? null;
     }
 
-    public function register(array $data): int
+    public function setAttribute(string $key, mixed $value): void
     {
-        $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
-        return $this->insert($data);
+        $this->attributes[$key] = $value;
     }
 
-    public function verifyPassword(string $password, string $hash): bool
+    public function getAttributes(): array
     {
-        return password_verify($password, $hash);
+        return $this->attributes;
     }
 
-    public function getTechniciens(): array
+    public function fill(array $data): void
     {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE role = 'technicien' ORDER BY nom ASC");
-        $stmt->execute();
-        return $stmt->fetchAll();
+        $this->attributes = $data;
     }
 }

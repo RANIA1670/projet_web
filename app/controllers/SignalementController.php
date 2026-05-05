@@ -4,35 +4,38 @@
  */
 
 require_once APP_PATH . 'core/Controller.php';
-require_once APP_PATH . 'models/SignalementModel.php';
-require_once APP_PATH . 'models/CategorieModel.php';
+require_once APP_PATH . 'services/SignalementService.php';
+require_once APP_PATH . 'services/CategorieService.php';
+require_once APP_PATH . 'services/NotificationService.php';
 
 class SignalementController extends Controller
 {
-    private SignalementModel $signalementModel;
-    private CategorieModel $categorieModel;
+    private SignalementService $signalementService;
+    private CategorieService   $categorieService;
+    private NotificationService $notificationService;
 
     public function __construct()
     {
-        $this->signalementModel = new SignalementModel();
-        $this->categorieModel   = new CategorieModel();
+        $this->signalementService = new SignalementService();
+        $this->categorieService   = new CategorieService();
+        $this->notificationService = new NotificationService();
     }
 
     public function index(array $params = []): void
     {
-        $page     = max(1, (int)$this->get('page', 1));
-        $perPage  = ITEMS_PER_PAGE;
-        $filters  = [
-            'statut'      => $this->get('statut', ''),
-            'priorite'    => $this->get('priorite', ''),
-            'categorie_id'=> $this->get('categorie_id', ''),
-            'search'      => $this->get('search', ''),
+        $page    = max(1, (int)$this->get('page', 1));
+        $perPage = ITEMS_PER_PAGE;
+        $filters = [
+            'statut'       => $this->get('statut', ''),
+            'priorite'     => $this->get('priorite', ''),
+            'categorie_id' => $this->get('categorie_id', ''),
+            'search'       => $this->get('search', ''),
         ];
 
-        $signalements = $this->signalementModel->findAllWithDetails($page, $perPage, $filters);
-        $total        = $this->signalementModel->countFiltered($filters);
+        $signalements = $this->signalementService->findAllWithDetails($page, $perPage, $filters);
+        $total        = $this->signalementService->countFiltered($filters);
         $totalPages   = (int)ceil($total / $perPage);
-        $categories   = $this->categorieModel->findAll('nom', 'ASC');
+        $categories   = $this->categorieService->getModel()->findAll('nom', 'ASC');
 
         $this->render('signalement/index', [
             'pageTitle'    => 'Liste des Signalements',
@@ -48,7 +51,7 @@ class SignalementController extends Controller
 
     public function create(array $params = []): void
     {
-        $categories = $this->categorieModel->findAll('nom', 'ASC');
+        $categories = $this->categorieService->getModel()->findAll('nom', 'ASC');
         $this->render('signalement/create', [
             'pageTitle'  => 'Signaler un Problème',
             'categories' => $categories,
@@ -84,21 +87,24 @@ class SignalementController extends Controller
         }
 
         $data = [
-            'user_id'      => $_SESSION['user_id'] ?? null,
-            'titre'        => $titre,
-            'description'  => $description,
-            'categorie_id' => $categorie_id ?: null,
-            'adresse'      => $adresse,
-            'priorite'     => in_array($priorite, ['faible','moyenne','haute','urgente']) ? $priorite : 'moyenne',
-            'date_incident'=> $date_incident,
-            'statut'       => 'nouveau',
-            'image'        => $imagePath,
-            'latitude'     => $latitude ?: null,
-            'longitude'    => $longitude ?: null,
+            'user_id'       => $_SESSION['user_id'] ?? null,
+            'titre'         => $titre,
+            'description'   => $description,
+            'categorie_id'  => $categorie_id ?: null,
+            'adresse'       => $adresse,
+            'priorite'      => in_array($priorite, ['faible','moyenne','haute','urgente']) ? $priorite : 'moyenne',
+            'date_incident' => $date_incident,
+            'statut'        => 'nouveau',
+            'image'         => $imagePath,
+            'latitude'      => $latitude ?: null,
+            'longitude'     => $longitude ?: null,
         ];
 
-        $id = $this->signalementModel->insert($data);
+        $id = $this->signalementService->getModel()->insert($data);
         if ($id) {
+            // Notifier les techniciens d'un nouveau signalement
+            $this->notificationService->notifyTechnicians($id, $data['priorite']);
+
             $this->setFlash('success', 'Signalement créé avec succès ! Référence : #' . str_pad($id, 5, '0', STR_PAD_LEFT));
             $this->redirect('signalement/' . $id);
         } else {
@@ -109,8 +115,8 @@ class SignalementController extends Controller
 
     public function show(array $params = []): void
     {
-        $id = (int)($params['id'] ?? 0);
-        $signalement = $this->signalementModel->findByIdWithDetails($id);
+        $id          = (int)($params['id'] ?? 0);
+        $signalement = $this->signalementService->findByIdWithDetails($id);
         if (!$signalement) {
             http_response_code(404);
             require APP_PATH . 'views/errors/404.php';
@@ -126,10 +132,10 @@ class SignalementController extends Controller
     public function edit(array $params = []): void
     {
         $this->requireLogin();
-        $id = (int)($params['id'] ?? 0);
-        $signalement = $this->signalementModel->findByIdWithDetails($id);
+        $id          = (int)($params['id'] ?? 0);
+        $signalement = $this->signalementService->findByIdWithDetails($id);
         if (!$signalement) { $this->redirect('signalements'); return; }
-        $categories = $this->categorieModel->findAll('nom', 'ASC');
+        $categories = $this->categorieService->getModel()->findAll('nom', 'ASC');
         $this->render('signalement/edit', [
             'pageTitle'   => 'Modifier le Signalement',
             'signalement' => $signalement,
@@ -141,9 +147,11 @@ class SignalementController extends Controller
     public function update(array $params = []): void
     {
         $this->requireLogin();
-        $id = (int)($params['id'] ?? 0);
-        $signalement = $this->signalementModel->findById($id);
+        $id          = (int)($params['id'] ?? 0);
+        $signalement = $this->signalementService->getModel()->findById($id);
         if (!$signalement) { $this->redirect('signalements'); return; }
+
+        $ancienStatut = $signalement['statut'];
 
         $data = [
             'titre'        => $this->sanitize($this->input('titre', '')),
@@ -160,7 +168,12 @@ class SignalementController extends Controller
             if ($imagePath !== false) $data['image'] = $imagePath;
         }
 
-        $this->signalementModel->update($id, $data);
+        $this->signalementService->getModel()->update($id, $data);
+
+        if ($ancienStatut !== $data['statut']) {
+            $this->notificationService->notifyStatusChange($id, $ancienStatut, $data['statut']);
+        }
+
         $this->setFlash('success', 'Signalement mis à jour avec succès.');
         $this->redirect('signalement/' . $id);
     }
@@ -168,26 +181,21 @@ class SignalementController extends Controller
     public function destroy(array $params = []): void
     {
         $this->requireLogin();
-        $id = (int)($params['id'] ?? 0);
+        $id   = (int)($params['id'] ?? 0);
         $user = $this->currentUser();
-        
-        $signalement = $this->signalementModel->findById($id);
-        if (!$signalement) {
-            $this->redirect('signalements');
-            return;
-        }
 
-        // Seuls l'administrateur ou l'auteur du signalement peuvent le supprimer
+        $signalement = $this->signalementService->getModel()->findById($id);
+        if (!$signalement) { $this->redirect('signalements'); return; }
+
         if ($user['role'] !== 'admin' && $user['id'] != $signalement['user_id']) {
             $this->setFlash('error', 'Vous n\'avez pas les droits nécessaires pour supprimer ce signalement.');
             $this->redirect('signalement/' . $id);
             return;
         }
 
-        $this->signalementModel->delete($id);
+        $this->signalementService->getModel()->delete($id);
         $this->setFlash('success', 'Le signalement #' . $id . ' a été supprimé.');
 
-        // Redirection intelligente selon le rôle
         if ($user['role'] === 'admin') {
             $this->redirect('admin/signalements');
         } else {
@@ -199,22 +207,22 @@ class SignalementController extends Controller
     {
         $page    = max(1, (int)$this->get('page', 1));
         $filters = [
-            'statut'      => $this->get('statut', ''),
-            'priorite'    => $this->get('priorite', ''),
-            'categorie_id'=> $this->get('categorie_id', ''),
-            'search'      => $this->get('search', ''),
+            'statut'       => $this->get('statut', ''),
+            'priorite'     => $this->get('priorite', ''),
+            'categorie_id' => $this->get('categorie_id', ''),
+            'search'       => $this->get('search', ''),
         ];
-        $signalements = $this->signalementModel->findAllWithDetails($page, ITEMS_PER_PAGE, $filters);
-        $total        = $this->signalementModel->countFiltered($filters);
+        $signalements = $this->signalementService->findAllWithDetails($page, ITEMS_PER_PAGE, $filters);
+        $total        = $this->signalementService->countFiltered($filters);
         $this->json(['data' => $signalements, 'total' => $total, 'page' => $page]);
     }
 
     public function apiStats(array $params = []): void
     {
         $this->json([
-            'total'      => $this->signalementModel->count(),
-            'par_statut' => $this->signalementModel->getStatsByStatut(),
-            'par_categorie' => $this->signalementModel->getStatsByCategorie(),
+            'total'         => $this->signalementService->getModel()->count(),
+            'par_statut'    => $this->signalementService->getStatsByStatut(),
+            'par_categorie' => $this->signalementService->getStatsByCategorie(),
         ]);
     }
 
@@ -231,3 +239,5 @@ class SignalementController extends Controller
         return $filename;
     }
 }
+
+

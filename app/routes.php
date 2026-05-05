@@ -1,53 +1,118 @@
 <?php
 /**
  * CityZen - Routes Definition
+ * Sections séparées : FRONT OFFICE | BACKOFFICE
  */
 
-// Home
-$router->get('/', 'HomeController', 'index');
+// ══════════════════════════════════════════════════════
+//  FRONT OFFICE  (layout: default)
+// ══════════════════════════════════════════════════════
+
+// Accueil
+$router->get('/',        'HomeController', 'index');
 $router->get('/accueil', 'HomeController', 'index');
 
 // Signalements
-$router->get('/signalements', 'SignalementController', 'index');
-$router->get('/signalement/creer', 'SignalementController', 'create');
-$router->post('/signalement/creer', 'SignalementController', 'store');
-$router->get('/signalement/{id}', 'SignalementController', 'show');
-$router->get('/signalement/{id}/modifier', 'SignalementController', 'edit');
+$router->get('/signalements',               'SignalementController', 'index');
+$router->get('/signalement/creer',          'SignalementController', 'create');
+$router->post('/signalement/creer',         'SignalementController', 'store');
+$router->get('/signalement/{id}',           'SignalementController', 'show');
+$router->get('/signalement/{id}/modifier',  'SignalementController', 'edit');
 $router->post('/signalement/{id}/modifier', 'SignalementController', 'update');
-$router->post('/signalement/{id}/supprimer', 'SignalementController', 'destroy');
+$router->post('/signalement/{id}/supprimer','SignalementController', 'destroy');
 
-// API AJAX pour signalements
+// API AJAX signalements
 $router->get('/api/signalements', 'SignalementController', 'apiList');
-$router->get('/api/stats', 'SignalementController', 'apiStats');
+$router->get('/api/stats',        'SignalementController', 'apiStats');
 
-// Interventions - Demandes
-$router->get('/intervention/demande', 'InterventionController', 'demandeForm');
+// Interventions (front)
+$router->get('/intervention/demande',  'InterventionController', 'demandeForm');
 $router->post('/intervention/demande', 'InterventionController', 'storeDemande');
-$router->get('/interventions', 'InterventionController', 'index');
-$router->get('/intervention/{id}', 'InterventionController', 'show');
+$router->get('/interventions',         'InterventionController', 'index');
+$router->get('/intervention/{id}',     'InterventionController', 'show');
 
 // Suivi
-$router->get('/suivi', 'SuiviController', 'index');
-$router->get('/suivi/{id}', 'SuiviController', 'show');
-$router->post('/suivi/{id}/commentaire', 'SuiviController', 'addComment');
-$router->get('/api/suivi/{id}', 'SuiviController', 'apiGet');
+$router->get('/suivi',                    'SuiviController', 'index');
+$router->get('/suivi/{id}',               'SuiviController', 'show');
+$router->post('/suivi/{id}/commentaire',  'SuiviController', 'addComment');
+$router->get('/api/suivi/{id}',           'SuiviController', 'apiGet');
 
 // Contact
-$router->get('/contact', 'ContactController', 'index');
+$router->get('/contact',  'ContactController', 'index');
 $router->post('/contact', 'ContactController', 'send');
 
-// Auth
-$router->get('/auth/connexion', 'AuthController', 'loginForm');
-$router->post('/auth/connexion', 'AuthController', 'login');
+// Authentification
+$router->get('/auth/connexion',   'AuthController', 'loginForm');
+$router->post('/auth/connexion',  'AuthController', 'login');
 $router->get('/auth/inscription', 'AuthController', 'registerForm');
-$router->post('/auth/inscription', 'AuthController', 'register');
+$router->post('/auth/inscription','AuthController', 'register');
 $router->get('/auth/deconnexion', 'AuthController', 'logout');
 
-// Administration
-$router->get('/admin', 'AdminController', 'index');
-$router->get('/admin/signalements', 'AdminController', 'signalements');
-$router->get('/admin/interventions', 'AdminController', 'interventions');
-$router->post('/admin/intervention/{id}/assigner', 'AdminController', 'assignTechnicien');
-$router->post('/admin/intervention/{id}/statut', 'AdminController', 'updateInterventionStatus');
-$router->post('/admin/intervention/{id}/supprimer', 'AdminController', 'deleteIntervention');
-$router->get('/admin/techniciens', 'AdminController', 'techniciens');
+// ══════════════════════════════════════════════════════
+//  BACKOFFICE  (layout: admin — controller: admin/AdminController)
+// ══════════════════════════════════════════════════════
+
+// Dashboard
+$router->get('/backoffice',            'admin/AdminController', 'dashboard');
+$router->get('/backoffice/export-pdf', 'admin/AdminController', 'exportPDF');
+
+// Signalements backoffice
+$router->get('/backoffice/signalements', 'admin/AdminController', 'signalements');
+$router->get('/backoffice/signalement/{id}', 'admin/AdminController', 'showSignalement');
+
+// Interventions backoffice
+$router->get('/backoffice/interventions',                  'admin/AdminController', 'interventions');
+$router->get('/backoffice/intervention/creer',             'admin/AdminController', 'createIntervention');
+$router->post('/backoffice/intervention/creer',            'admin/AdminController', 'storeIntervention');
+$router->get('/backoffice/intervention/{id}',              'admin/AdminController', 'showIntervention');
+$router->get('/backoffice/intervention/{id}/edit',         'admin/AdminController', 'editIntervention');
+$router->post('/backoffice/intervention/{id}/edit',        'admin/AdminController', 'updateIntervention');
+$router->post('/backoffice/intervention/{id}/assigner',    'admin/AdminController', 'assignTechnicien');
+$router->post('/backoffice/intervention/{id}/statut',      'admin/AdminController', 'updateInterventionStatus');
+$router->post('/backoffice/intervention/{id}/supprimer',   'admin/AdminController', 'deleteIntervention');
+
+// Techniciens backoffice
+$router->get('/backoffice/techniciens',               'admin/AdminController', 'techniciens');
+$router->get('/backoffice/technicien/creer',          'admin/AdminController', 'createTechnicien');
+$router->post('/backoffice/technicien/creer',         'admin/AdminController', 'storeTechnicien');
+$router->get('/backoffice/technicien/{id}/edit',      'admin/AdminController', 'editTechnicien');
+$router->post('/backoffice/technicien/{id}/edit',     'admin/AdminController', 'updateTechnicien');
+$router->post('/backoffice/technicien/{id}/supprimer','admin/AdminController', 'deleteTechnicien');
+
+// ALIAS /admin pour le même backoffice séparé
+$router->get('/admin',                             'admin/AdminController', 'dashboard');
+$router->get('/admin/export-pdf',                  'admin/AdminController', 'exportPDF');
+$router->get('/admin/signalements',                'admin/AdminController', 'signalements');
+$router->get('/admin/signalement/{id}',             'admin/AdminController', 'showSignalement');
+$router->get('/admin/interventions',               'admin/AdminController', 'interventions');
+$router->get('/admin/intervention/creer',          'admin/AdminController', 'createIntervention');
+$router->post('/admin/intervention/creer',         'admin/AdminController', 'storeIntervention');
+$router->get('/admin/intervention/{id}',           'admin/AdminController', 'showIntervention');
+$router->get('/admin/intervention/{id}/edit',      'admin/AdminController', 'editIntervention');
+$router->post('/admin/intervention/{id}/edit',     'admin/AdminController', 'updateIntervention');
+$router->post('/admin/intervention/{id}/assigner', 'admin/AdminController', 'assignTechnicien');
+$router->post('/admin/intervention/{id}/statut',   'admin/AdminController', 'updateInterventionStatus');
+$router->post('/admin/intervention/{id}/supprimer','admin/AdminController', 'deleteIntervention');
+$router->get('/admin/techniciens',                 'admin/AdminController', 'techniciens');
+$router->get('/admin/technicien/creer',            'admin/AdminController', 'createTechnicien');
+$router->post('/admin/technicien/creer',           'admin/AdminController', 'storeTechnicien');
+$router->get('/admin/technicien/{id}/edit',        'admin/AdminController', 'editTechnicien');
+$router->post('/admin/technicien/{id}/edit',       'admin/AdminController', 'updateTechnicien');
+$router->post('/admin/technicien/{id}/supprimer',  'admin/AdminController', 'deleteTechnicien');
+
+// ══════════════════════════════════════════════════════
+//  CARTOGRAPHIE & NOTIFICATIONS
+// ══════════════════════════════════════════════════════
+
+// Carte interactive
+$router->get('/carte',                 'MapController', 'index');
+$router->get('/api/signalements/carte','MapController', 'getSignalements');
+$router->get('/api/zones/stats',       'MapController', 'getStatsByZone');
+$router->get('/api/geocode',           'MapController', 'geocode');
+
+// Notifications
+$router->get('/notifications',                'NotificationController', 'index');
+$router->get('/api/notifications/unread',     'NotificationController', 'getUnread');
+$router->get('/api/notifications/widget',     'NotificationController', 'getWidget');
+$router->post('/api/notifications/mark-read', 'NotificationController', 'markAsRead');
+$router->post('/api/notifications/mark-all',  'NotificationController', 'markAllAsRead');

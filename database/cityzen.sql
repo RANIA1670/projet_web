@@ -85,6 +85,23 @@ CREATE TABLE IF NOT EXISTS contacts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    titre VARCHAR(255) NOT NULL,
+    message TEXT,
+    signalement_id INT,
+    intervention_id INT,
+    lue TINYINT(1) DEFAULT 0,
+    read_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (signalement_id) REFERENCES signalements(id) ON DELETE SET NULL,
+    FOREIGN KEY (intervention_id) REFERENCES interventions(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- Demandes Intervention Table
 CREATE TABLE IF NOT EXISTS demandes_intervention (
     id INT AUTO_INCREMENT PRIMARY KEY,

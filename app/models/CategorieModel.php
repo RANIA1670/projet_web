@@ -1,6 +1,7 @@
 <?php
 /**
- * CityZen - Category Model
+ * CityZen - CategorieModel
+ * Propriétés uniquement. Logique métier → CategorieService.
  */
 
 require_once APP_PATH . 'core/Model.php';
@@ -8,19 +9,25 @@ require_once APP_PATH . 'core/Model.php';
 class CategorieModel extends Model
 {
     protected string $table = 'categories';
+    protected array $attributes = [];
 
-    // [MÉTIER] : Récupération des catégories avec le nombre de signalements associés
-    // [JOINTURE] : Jointure entre categories et signalements
-    public function findAllWithCount(): array
+    public function getAttribute(string $key): mixed
     {
-        $stmt = $this->db->prepare("
-            SELECT c.*, COUNT(s.id) as count_signalements
-            FROM categories c
-            LEFT JOIN signalements s ON s.categorie_id = c.id
-            GROUP BY c.id
-            ORDER BY c.nom ASC
-        ");
-        $stmt->execute();
-        return $stmt->fetchAll();
+        return $this->attributes[$key] ?? null;
+    }
+
+    public function setAttribute(string $key, mixed $value): void
+    {
+        $this->attributes[$key] = $value;
+    }
+
+    public function getAttributes(): array
+    {
+        return $this->attributes;
+    }
+
+    public function fill(array $data): void
+    {
+        $this->attributes = $data;
     }
 }

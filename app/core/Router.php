@@ -52,17 +52,21 @@ class Router
 
     private function runController(string $controllerName, string $action, array $params = []): void
     {
-        $file = APP_PATH . 'controllers/' . $controllerName . '.php';
+        // Supporte les sous-dossiers : ex "admin/AdminController"
+        $parts     = explode('/', $controllerName);
+        $className = end($parts);                           // "AdminController"
+        $file      = APP_PATH . 'controllers/' . $controllerName . '.php';
+
         if (!file_exists($file)) {
             die("Controller introuvable : $controllerName");
         }
         require_once $file;
-        if (!class_exists($controllerName)) {
-            die("Classe introuvable : $controllerName");
+        if (!class_exists($className)) {
+            die("Classe introuvable : $className");
         }
-        $controller = new $controllerName();
+        $controller = new $className();
         if (!method_exists($controller, $action)) {
-            die("Méthode introuvable : $action dans $controllerName");
+            die("Méthode introuvable : $action dans $className");
         }
         $controller->$action($params);
     }

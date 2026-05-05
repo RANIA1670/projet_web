@@ -4,48 +4,47 @@
  */
 
 require_once APP_PATH . 'core/Controller.php';
-require_once APP_PATH . 'models/InterventionModel.php';
-require_once APP_PATH . 'models/SignalementModel.php';
+require_once APP_PATH . 'services/InterventionService.php';
+require_once APP_PATH . 'services/SignalementService.php';
 
 class SuiviController extends Controller
 {
-    private InterventionModel $interventionModel;
-    private SignalementModel $signalementModel;
+    private InterventionService $interventionService;
+    private SignalementService  $signalementService;
 
     public function __construct()
     {
-        $this->interventionModel = new InterventionModel();
-        $this->signalementModel  = new SignalementModel();
+        $this->interventionService = new InterventionService();
+        $this->signalementService  = new SignalementService();
     }
 
     public function index(array $params = []): void
     {
-        $reference = $this->get('reference', '');
+        $reference    = $this->get('reference', '');
         $intervention = null;
-        $suivi = [];
+        $suivi        = [];
 
         if (!empty($reference)) {
             $id = (int)ltrim($reference, '#0');
             if ($id > 0) {
-                $intervention = $this->interventionModel->findByIdWithDetails($id);
+                $intervention = $this->interventionService->findByIdWithDetails($id);
                 if ($intervention) {
-                    $suivi = $this->interventionModel->getSuivi($id);
+                    $suivi = $this->interventionService->getSuivi($id);
                 }
             }
-            // Also try by signalement id
             if (!$intervention) {
-                $signalement = $this->signalementModel->findById($id);
+                $signalement = $this->signalementService->getModel()->findById($id);
                 if ($signalement) {
-                    $rows = $this->interventionModel->find(['signalement_id' => $id]);
+                    $rows = $this->interventionService->getModel()->find(['signalement_id' => $id]);
                     if (!empty($rows)) {
-                        $intervention = $this->interventionModel->findByIdWithDetails($rows[0]['id']);
-                        $suivi = $this->interventionModel->getSuivi($rows[0]['id']);
+                        $intervention = $this->interventionService->findByIdWithDetails($rows[0]['id']);
+                        $suivi        = $this->interventionService->getSuivi($rows[0]['id']);
                     }
                 }
             }
         }
 
-        $recentInterventions = $this->interventionModel->findAllWithDetails(1, 5);
+        $recentInterventions = $this->interventionService->findAllWithDetails(1, 5);
 
         $this->render('suivi/index', [
             'pageTitle'           => 'Suivi d\'Intervention',
@@ -59,14 +58,14 @@ class SuiviController extends Controller
 
     public function show(array $params = []): void
     {
-        $id = (int)($params['id'] ?? 0);
-        $intervention = $this->interventionModel->findByIdWithDetails($id);
+        $id           = (int)($params['id'] ?? 0);
+        $intervention = $this->interventionService->findByIdWithDetails($id);
         if (!$intervention) {
             http_response_code(404);
             require APP_PATH . 'views/errors/404.php';
             return;
         }
-        $suivi = $this->interventionModel->getSuivi($id);
+        $suivi = $this->interventionService->getSuivi($id);
         $this->render('suivi/show', [
             'pageTitle'    => 'Suivi Intervention #' . str_pad($id, 5, '0', STR_PAD_LEFT),
             'intervention' => $intervention,
@@ -84,11 +83,11 @@ class SuiviController extends Controller
         $userId      = $_SESSION['user_id'] ?? null;
 
         if (!empty($commentaire)) {
-            $this->interventionModel->addSuivi($id, $statut, $commentaire, $userId);
+            $this->interventionService->addSuivi($id, $statut, $commentaire, $userId);
         }
 
         if ($this->isAjax()) {
-            $suivi = $this->interventionModel->getSuivi($id);
+            $suivi = $this->interventionService->getSuivi($id);
             $this->json(['success' => true, 'suivi' => $suivi]);
         } else {
             $this->setFlash('success', 'Commentaire ajouté.');
@@ -98,10 +97,10 @@ class SuiviController extends Controller
 
     public function apiGet(array $params = []): void
     {
-        $id = (int)($params['id'] ?? 0);
-        $intervention = $this->interventionModel->findByIdWithDetails($id);
+        $id           = (int)($params['id'] ?? 0);
+        $intervention = $this->interventionService->findByIdWithDetails($id);
         if (!$intervention) { $this->json(['error' => 'Non trouvé'], 404); return; }
-        $suivi = $this->interventionModel->getSuivi($id);
+        $suivi = $this->interventionService->getSuivi($id);
         $this->json(['intervention' => $intervention, 'suivi' => $suivi]);
     }
 }

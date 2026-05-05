@@ -1,12 +1,13 @@
 <div class="admin-container container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <a href="<?= APP_URL ?>/admin" class="btn btn-sm btn-outline mb-2"><i class="fas fa-arrow-left"></i> Retour au tableau de bord</a>
-            <h1><i class="fas fa-list-alt"></i> Gestion des Signalements</h1>
+            <a href="<?= APP_URL ?>/admin" class="btn btn-sm btn-outline-secondary mb-2"><i class="fas fa-arrow-left"></i> Retour au tableau de bord</a>
+            <h1 class="mb-1"><i class="fas fa-exclamation-triangle"></i> Gestion des Signalements</h1>
+            <p class="text-muted">Filtrer, consulter et gérer tous les signalements des citoyens.</p>
         </div>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4 bg-white rounded shadow-sm">
         <div class="card-body">
             <form action="<?= APP_URL ?>/admin/signalements" method="GET" class="d-flex gap-3 align-items-end">
                 <div class="form-group mb-0 flex-grow-1">
@@ -87,9 +88,9 @@
                             <span class="badge <?= $badgeClass ?>"><?= $statutLabel ?></span>
                         </td>
                         <td>
-                            <a href="<?= APP_URL ?>/signalement/<?= $sig['id'] ?>" class="btn btn-sm btn-outline-primary" title="Voir les détails"><i class="fas fa-eye"></i></a>
+                            <a href="<?= APP_URL ?>/admin/signalement/<?= $sig['id'] ?>" class="btn btn-sm btn-outline-primary" title="Voir les détails"><i class="fas fa-eye"></i></a>
                             <?php if ($sig['statut'] === 'nouveau'): ?>
-                                <a href="<?= APP_URL ?>/intervention/demande?signalement_id=<?= $sig['id'] ?>" class="btn btn-sm btn-primary" title="Créer une intervention"><i class="fas fa-tools"></i></a>
+                                <a href="<?= APP_URL ?>/admin/intervention/creer?signalement_id=<?= $sig['id'] ?>" class="btn btn-sm btn-primary" title="Créer une intervention"><i class="fas fa-tools"></i></a>
                             <?php endif; ?>
                             
                             <form action="<?= APP_URL ?>/signalement/<?= $sig['id'] ?>/supprimer" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce signalement ?');">
@@ -145,3 +146,13 @@
     padding: 20px;
 }
 </style>
+
+
+
+
+
+
+
+
+
+

@@ -15,6 +15,12 @@ abstract class Model
         $this->db = Database::getInstance();
     }
 
+    /** Expose la connexion PDO pour les Services */
+    public function getDb(): PDO
+    {
+        return $this->db;
+    }
+
     public function findAll(string $orderBy = 'id', string $direction = 'DESC'): array
     {
         $direction = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';

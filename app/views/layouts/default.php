@@ -66,8 +66,8 @@
             </li>
             <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
             <li>
-                <a href="<?= APP_URL ?>/admin" class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/admin') !== false ? 'active' : '' ?>">
-                    <i class="fas fa-cog"></i> Administration
+                <a href="<?= APP_URL ?>/admin" class="btn btn-primary btn-sm">
+                    <i class="fas fa-cog"></i> Admin
                 </a>
             </li>
             <?php endif; ?>
@@ -75,6 +75,23 @@
 
         <!-- Nav Actions -->
         <div class="nav-actions">
+            <!-- Widget Notifications -->
+            <?php if (isset($_SESSION['user_id'])): ?>
+            <div style="position:relative;">
+                <button id="notifBtn" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-dark); position:relative;">
+                    <i class="fas fa-bell"></i>
+                    <span id="notifBadge" style="display:none; position:absolute; top:-8px; right:-8px; background:var(--secondary); color:white; border-radius:50%; width:20px; height:20px; font-size:0.75rem; display:flex; align-items:center; justify-content:center; font-weight:bold;"></span>
+                </button>
+                <div id="notifDropdown" style="display:none; position:absolute; top:100%; right:0; background:white; border:1px solid var(--border-color); border-radius:8px; width:350px; max-height:400px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:1000;">
+                    <div style="padding:12px; border-bottom:1px solid var(--border-color); font-weight:600;">Notifications</div>
+                    <div id="notifList"></div>
+                    <div style="padding:12px; text-align:center; border-top:1px solid var(--border-color);">
+                        <a href="<?= APP_URL ?>/notifications" style="color:var(--secondary); text-decoration:none; font-size:0.9rem;">Voir toutes les notifications</a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <a href="<?= APP_URL ?>/signalement/creer" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus"></i> Signaler
             </a>
@@ -201,5 +218,120 @@
 
 <!-- Main JS -->
 <script src="<?= APP_URL ?>/public/assets/js/main.js"></script>
+
+<!-- ========== WIDGET NOTIFICATIONS ========== -->
+<script>
+<?php if (isset($_SESSION['user_id'])): ?>
+// Initialiser le widget de notifications
+document.addEventListener('DOMContentLoaded', function() {
+    const notifBtn = document.getElementById('notifBtn');
+    const notifDropdown = document.getElementById('notifDropdown');
+    const notifList = document.getElementById('notifList');
+    const notifBadge = document.getElementById('notifBadge');
+
+    if (!notifBtn) return;
+
+    // Charger les notifications
+    async function loadNotifications() {
+        try {
+            const response = await fetch('<?= APP_URL ?>/api/notifications/widget');
+            const data = await response.json();
+
+            // Mettre à jour le badge
+            if (data.count > 0) {
+                notifBadge.textContent = data.count;
+                notifBadge.style.display = 'flex';
+            } else {
+                notifBadge.style.display = 'none';
+            }
+
+            // Mettre à jour la liste
+            if (data.notifications.length === 0) {
+                notifList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Aucune nouvelle notification</div>';
+            } else {
+                notifList.innerHTML = data.notifications.map(n => `
+                    <div style="padding:12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='white'">
+                        <div style="display:flex; justify-content:space-between; align-items:start; gap:12px;">
+                            <div style="flex:1;">
+                                <strong style="font-size:0.95rem;">${n.titre}</strong>
+                                <p style="margin:4px 0 0; font-size:0.85rem; color:var(--text-muted);">${n.message || ''}</p>
+                                <p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-muted);">${n.time_ago}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Erreur chargement notifications:', error);
+        }
+    }
+
+    // Charger au démarrage
+    loadNotifications();
+
+    // Recharger toutes les 30 secondes
+    setInterval(loadNotifications, 30000);
+
+    // Afficher/masquer le dropdown
+    notifBtn.addEventListener('click', () => {
+        notifDropdown.style.display = notifDropdown.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Fermer en cliquant ailleurs
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#notifBtn') && !e.target.closest('#notifDropdown')) {
+            notifDropdown.style.display = 'none';
+        }
+    });
+});
+<?php endif; ?>
+</script>
+
+<!-- ========== BOUTON ADMINISTRATION FLOTTANT ========== -->
+<a href="<?= APP_URL ?>/admin" id="adminFloatBtn" title="Accès Administration">
+    <i class="fas fa-cog"></i>
+    <span>Administration</span>
+</a>
+
+<style>
+    #adminFloatBtn {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 18px;
+        background: linear-gradient(135deg, #6c63ff, #4ecdc4);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 50px;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: 'Inter', 'Montserrat', sans-serif;
+        box-shadow: 0 4px 20px rgba(108, 99, 255, 0.4);
+        transition: all 0.3s ease;
+        letter-spacing: 0.3px;
+    }
+    #adminFloatBtn:hover {
+        transform: translateY(-3px) scale(1.04);
+        box-shadow: 0 8px 28px rgba(108, 99, 255, 0.55);
+        background: linear-gradient(135deg, #5a52d5, #3dbdb5);
+    }
+    #adminFloatBtn:active { transform: translateY(0) scale(0.98); }
+    #adminFloatBtn i {
+        font-size: 15px;
+        animation: spin-slow 4s linear infinite;
+    }
+    @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+    }
+    @media (max-width: 600px) {
+        #adminFloatBtn span { display: none; }
+        #adminFloatBtn { padding: 13px; border-radius: 50%; }
+    }
+</style>
 </body>
 </html>

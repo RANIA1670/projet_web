@@ -4,22 +4,20 @@
  */
 
 require_once APP_PATH . 'core/Controller.php';
-require_once APP_PATH . 'models/UserModel.php';
+require_once APP_PATH . 'services/UserService.php';
 
 class AuthController extends Controller
 {
-    private UserModel $userModel;
+    private UserService $userService;
 
     public function __construct()
     {
-        $this->userModel = new UserModel();
+        $this->userService = new UserService();
     }
 
     public function loginForm(array $params = []): void
     {
-        if ($this->isLoggedIn()) {
-            $this->redirect('/');
-        }
+        if ($this->isLoggedIn()) { $this->redirect('/'); }
         $this->render('auth/login', [
             'pageTitle' => 'Connexion',
             'flash'     => $this->getFlash(),
@@ -39,8 +37,8 @@ class AuthController extends Controller
             return;
         }
 
-        $user = $this->userModel->findByEmail($email);
-        if (!$user || !$this->userModel->verifyPassword($password, $user['password'])) {
+        $user = $this->userService->findByEmail($email);
+        if (!$user || !$this->userService->verifyPassword($password, $user['password'])) {
             $this->setFlash('error', 'Email ou mot de passe incorrect.');
             $this->redirect('auth/connexion');
             return;
@@ -97,13 +95,13 @@ class AuthController extends Controller
             $this->redirect('auth/inscription');
             return;
         }
-        if ($this->userModel->findByEmail($email)) {
+        if ($this->userService->findByEmail($email)) {
             $this->setFlash('error', 'Cette adresse email est déjà utilisée.');
             $this->redirect('auth/inscription');
             return;
         }
 
-        $id = $this->userModel->register([
+        $id = $this->userService->register([
             'nom'       => $nom,
             'prenom'    => $prenom,
             'email'     => $email,
