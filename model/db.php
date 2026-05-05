@@ -112,19 +112,14 @@ function cityzen_db_ensure_password_reset_table(PDO $pdo): void
 {
     $pdo->exec('
         CREATE TABLE IF NOT EXISTS password_reset_codes (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id INT UNSIGNED NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            method VARCHAR(10) NOT NULL, -- \'email\' or \'sms\'
+            contact VARCHAR(255) NOT NULL, -- email or phone number
             code VARCHAR(6) NOT NULL,
-            type ENUM("email", "sms") NOT NULL,
-            contact VARCHAR(255) NOT NULL COMMENT "email or phone number",
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             expires_at DATETIME NOT NULL,
             used_at DATETIME NULL,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY uq_reset_code (code),
-            KEY idx_user_id (user_id),
-            KEY idx_expires_at (expires_at),
-            KEY idx_contact_type (contact, type),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ');
@@ -637,5 +632,123 @@ function cityzen_update_user_password(int $userId, string $newPassword): array
         return ['ok' => false, 'error' => 'Erreur lors de la mise à jour du mot de passe.'];
     } catch (Throwable $e) {
         return ['ok' => false, 'error' => 'Erreur base de données: ' . $e->getMessage()];
+    }
+}
+
+// Fonctions pour la gestion des codes 2FA
+function cityzen_ensure_2fa_table(PDO $pdo): void
+{
+    $pdo->exec('
+        CREATE TABLE IF NOT EXISTS two_factor_codes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            qr_token VARCHAR(32) NOT NULL UNIQUE,
+            code VARCHAR(6) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            session_id VARCHAR(255) NULL,
+            INDEX idx_qr_token (qr_token),
+            INDEX idx_code (code),
+            INDEX idx_expires_at (expires_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ');
+}
+
+function cityzen_generate_2fa_code(string $qrToken): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        // S'assurer que la table existe
+        cityzen_ensure_2fa_table($pdo);
+        
+        // Nettoyer les anciens codes expirés
+        $stmt = $pdo->prepare('DELETE FROM two_factor_codes WHERE expires_at < NOW()');
+        $stmt->execute();
+        
+        // Vérifier si un code existe déjà pour ce qr_token
+        $stmt = $pdo->prepare('
+            SELECT code, expires_at FROM two_factor_codes 
+            WHERE qr_token = ? AND used_at IS NULL AND expires_at > NOW()
+            ORDER BY created_at DESC LIMIT 1
+        ');
+        $stmt->execute([$qrToken]);
+        $existingCode = $stmt->fetch();
+        
+        if ($existingCode) {
+            // Un code valide existe déjà, le retourner
+            return ['ok' => true, 'code' => $existingCode['code']];
+        }
+        
+        // Générer un nouveau code à 6 chiffres
+        $code = sprintf('%06d', random_int(0, 999999));
+        
+        // Insérer le nouveau code
+        $expiresAt = date('Y-m-d H:i:s', time() + 900); // 15 minutes
+        $stmt = $pdo->prepare('
+            INSERT INTO two_factor_codes (qr_token, code, expires_at, session_id) 
+            VALUES (?, ?, ?, ?)
+        ');
+        
+        $sessionId = session_id();
+        $stmt->execute([$qrToken, $code, $expiresAt, $sessionId]);
+        
+        return ['ok' => true, 'code' => $code];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur lors de la génération du code 2FA: ' . $e->getMessage()];
+    }
+}
+
+function cityzen_verify_2fa_code(string $qrToken, string $code): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        $stmt = $pdo->prepare('
+            SELECT id, qr_token, code, expires_at, used_at, session_id 
+            FROM two_factor_codes 
+            WHERE qr_token = ? AND code = ? AND used_at IS NULL AND expires_at > NOW()
+            ORDER BY created_at DESC 
+            LIMIT 1
+        ');
+        $stmt->execute([$qrToken, $code]);
+        $result = $stmt->fetch();
+        
+        if (!$result) {
+            return ['ok' => false, 'error' => 'Code 2FA invalide ou expiré.'];
+        }
+        
+        // Marquer le code comme utilisé
+        $stmt = $pdo->prepare('UPDATE two_factor_codes SET used_at = NOW() WHERE id = ?');
+        $stmt->execute([$result['id']]);
+        
+        return ['ok' => true, 'verified' => true];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur lors de la vérification du code 2FA: ' . $e->getMessage()];
+    }
+}
+
+function cityzen_get_2fa_code(string $qrToken): array
+{
+    try {
+        $pdo = cityzen_db();
+        
+        $stmt = $pdo->prepare('
+            SELECT code, created_at, expires_at, used_at 
+            FROM two_factor_codes 
+            WHERE qr_token = ? AND used_at IS NULL AND expires_at > NOW()
+            ORDER BY created_at DESC 
+            LIMIT 1
+        ');
+        $stmt->execute([$qrToken]);
+        $result = $stmt->fetch();
+        
+        if (!$result) {
+            return ['ok' => false, 'error' => 'Aucun code 2FA valide trouvé.'];
+        }
+        
+        return ['ok' => true, 'code' => $result['code'], 'expires_at' => $result['expires_at']];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'Erreur lors de la récupération du code 2FA: ' . $e->getMessage()];
     }
 }

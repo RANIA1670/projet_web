@@ -11,6 +11,65 @@ $qrImageUrl = (string) ($qrGate['image_url'] ?? '');
 $qrValidated = ($qrGate['validated'] ?? false) === true;
 $qrValidationError = (string) ($qrGate['validation_error'] ?? '');
 ?>
+<style>
+.two-fa-info {
+    background: linear-gradient(135deg, #e8f5e8 0%, #f0fff4 100%);
+    border: 1px solid #c3e6cb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.two-fa-hint {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    color: #155724;
+    font-weight: 600;
+}
+
+.two-fa-hint strong {
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 2px solid #28a745;
+    display: inline-block;
+}
+
+.two-fa-note {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #155724;
+    opacity: 0.8;
+}
+
+input[name="two_fa_code"] {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 3px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    border: 2px solid #28a745;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fff9 100%);
+}
+
+input[name="two_fa_code"]:focus {
+    border-color: #155724;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.two-fa-info {
+    animation: fadeIn 0.5s ease-out;
+}
+</style>
 <div class="site-shell">
   <header class="topbar topbar-public">
     <div class="brand">
@@ -81,6 +140,18 @@ $qrValidationError = (string) ($qrGate['validation_error'] ?? '');
           <input type="password" name="pass2" autocomplete="new-password" minlength="8" required>
           <?php if (isset($errors['pass2'])): ?><small class="login-error" role="alert"><?= htmlspecialchars((string) $errors['pass2']) ?></small><?php endif; ?>
         </label>
+        
+        <?php if ($qrValidated && isset($qrGate['two_fa_code'])): ?>
+        <label class="login-field">
+          <span>Code 2FA (obtenu après scan QR)</span>
+          <div class="two-fa-info">
+            <p class="two-fa-hint">Code généré : <strong><?= htmlspecialchars($qrGate['two_fa_code']) ?></strong></p>
+            <p class="two-fa-note">Entrez ce code pour valider votre inscription</p>
+          </div>
+          <input type="text" name="two_fa_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" autocomplete="off" required>
+          <?php if (isset($errors['two_fa_code'])): ?><small class="login-error" role="alert"><?= htmlspecialchars((string) $errors['two_fa_code']) ?></small><?php endif; ?>
+        </label>
+        <?php endif; ?>
 
         <button type="submit" class="login-submit">S'inscrire</button>
       </form>

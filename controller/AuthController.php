@@ -143,6 +143,23 @@ final class AuthController extends Controller
                     $errors['pass2'] = 'Les mots de passe ne correspondent pas.';
                 }
 
+                // Validation du code 2FA si le QR est validé
+                if ($this->isRegisterQrValidated()) {
+                    $twoFaCode = trim((string) ($_POST['two_fa_code'] ?? ''));
+                    if ($twoFaCode === '') {
+                        $errors['two_fa_code'] = 'Le code 2FA est obligatoire.';
+                    } elseif (!preg_match('/^[0-9]{6}$/', $twoFaCode)) {
+                        $errors['two_fa_code'] = 'Le code 2FA doit contenir 6 chiffres.';
+                    } else {
+                        // Vérifier le code 2FA
+                        $qrToken = $_SESSION['register_2fa_qr_token'] ?? '';
+                        $verifyResult = \cityzen_verify_2fa_code($qrToken, $twoFaCode);
+                        if (!$verifyResult['ok']) {
+                            $errors['two_fa_code'] = $verifyResult['error'];
+                        }
+                    }
+                }
+
                 if ($errors !== []) {
                     $error = 'Corrigez les champs en erreur.';
                     View::render('auth/register', [
@@ -283,6 +300,15 @@ final class AuthController extends Controller
             if (hash_equals($token, strtolower($qrFromQuery))) {
                 $_SESSION[self::REGISTER_QR_SESSION_VALIDATED] = true;
                 $_SESSION[self::REGISTER_QR_SESSION_VALIDATED_AT] = gmdate('c');
+                
+                // Générer un code 2FA pour cette session
+                $twoFactorResult = \cityzen_generate_2fa_code($token);
+                if ($twoFactorResult['ok']) {
+                    $_SESSION['register_2fa_code'] = $twoFactorResult['code'];
+                    $_SESSION['register_2fa_qr_token'] = $token;
+                } else {
+                    $validationError = 'Erreur lors de la génération du code 2FA: ' . $twoFactorResult['error'];
+                }
             } else {
                 $validationError = 'QR invalide ou expire. Rechargez la page puis scannez a nouveau.';
             }
@@ -297,6 +323,7 @@ final class AuthController extends Controller
             'image_url' => $this->qrImageUrlFor($scanUrl),
             'validated' => $validated,
             'validation_error' => $validationError,
+            'two_fa_code' => $_SESSION['register_2fa_code'] ?? null,
         ];
     }
 
