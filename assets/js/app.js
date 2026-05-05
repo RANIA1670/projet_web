@@ -197,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const initVoiceToText = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (typeof SpeechRecognition !== 'function') {
+      showToast('Dictee vocale non supportee sur ce navigateur. Utilisez Chrome ou Edge.');
       return;
     }
 
@@ -240,6 +241,44 @@ document.addEventListener('DOMContentLoaded', () => {
       return normalized.trim();
     };
 
+    const buildChunkWithSpacing = (left, right, text) => {
+      if (text === '') {
+        return '';
+      }
+
+      const needsSpaceBefore = left !== '' && !/[ \n\t]$/.test(left) && text[0] !== '\n';
+      const needsSpaceAfter = right !== '' && !/^[ \n\t]/.test(right) && text[text.length - 1] !== '\n';
+      return `${needsSpaceBefore ? ' ' : ''}${text}${needsSpaceAfter ? ' ' : ''}`;
+    };
+
+    const renderSessionText = (session, committedText, interimText) => {
+      const parts = [];
+      if (committedText !== '') {
+        parts.push(committedText);
+      }
+      if (interimText !== '') {
+        parts.push(interimText);
+      }
+
+      const spokenText = parts.join(' ').trim();
+      const chunk = buildChunkWithSpacing(session.leadingValue, session.trailingValue, spokenText);
+      const nextValue = `${session.leadingValue}${chunk}${session.trailingValue}`;
+      const nextCaret = (session.leadingValue + chunk).length;
+
+      session.field.value = nextValue;
+      try {
+        if (typeof session.field.setSelectionRange === 'function') {
+          session.field.setSelectionRange(nextCaret, nextCaret);
+        }
+      } catch (error) {
+        // Some input types do not allow caret selection updates.
+      }
+      session.field.dispatchEvent(new Event('input', { bubbles: true }));
+      session.field.dispatchEvent(new Event('change', { bubbles: true }));
+      session.committedText = committedText;
+      session.interimText = interimText;
+    };
+
     const isEligibleField = (field) => {
       if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
         return false;
@@ -257,26 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const type = (field.type || 'text').toLowerCase();
       return supportedInputTypes.has(type);
-    };
-
-    const insertAtCursor = (field, text) => {
-      const start = field.selectionStart ?? field.value.length;
-      const end = field.selectionEnd ?? field.value.length;
-      const left = field.value.slice(0, start);
-      const right = field.value.slice(end);
-
-      const needsSpaceBefore = left !== '' && !/[ \n\t]$/.test(left) && text[0] !== '\n';
-      const needsSpaceAfter = right !== '' && !/^[ \n\t]/.test(right) && text[text.length - 1] !== '\n';
-      const chunk = `${needsSpaceBefore ? ' ' : ''}${text}${needsSpaceAfter ? ' ' : ''}`;
-      const nextValue = `${left}${chunk}${right}`;
-      const nextCaret = (left + chunk).length;
-
-      field.value = nextValue;
-      if (typeof field.setSelectionRange === 'function') {
-        field.setSelectionRange(nextCaret, nextCaret);
-      }
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      field.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
     const setSessionState = (button, listening) => {
@@ -348,6 +367,15 @@ document.addEventListener('DOMContentLoaded', () => {
       recognition.interimResults = true;
       recognition.continuous = true;
       recognition.maxAlternatives = 1;
+      let insertStart = field.value.length;
+      let insertEnd = field.value.length;
+      try {
+        insertStart = field.selectionStart ?? field.value.length;
+        insertEnd = field.selectionEnd ?? field.value.length;
+      } catch (error) {
+        insertStart = field.value.length;
+        insertEnd = field.value.length;
+      }
 
       const session = {
         field,
@@ -355,6 +383,10 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition,
         running: true,
         silenceTimer: 0,
+        leadingValue: field.value.slice(0, insertStart),
+        trailingValue: field.value.slice(insertEnd),
+        committedText: '',
+        interimText: '',
       };
       activeSession = session;
 
@@ -374,16 +406,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let finalText = '';
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        let interimText = '';
+
+        for (let i = 0; i < event.results.length; i += 1) {
           const spoken = event.results[i][0]?.transcript || '';
           if (event.results[i].isFinal) {
             finalText += `${spoken} `;
+          } else {
+            interimText += `${spoken} `;
           }
         }
 
-        const normalized = normalizeTranscript(finalText);
-        if (normalized !== '') {
-          insertAtCursor(field, normalized);
+        const normalizedFinal = normalizeTranscript(finalText);
+        const normalizedInterim = normalizeTranscript(interimText);
+
+        if (
+          normalizedFinal !== activeSession.committedText ||
+          normalizedInterim !== activeSession.interimText
+        ) {
+          renderSessionText(activeSession, normalizedFinal, normalizedInterim);
         }
 
         resetSilenceTimeout(field, button, recognition);

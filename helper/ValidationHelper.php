@@ -117,8 +117,8 @@ final class ValidationHelper
         }
         
         $phoneClean = preg_replace('/[\s\-\.\(\)]+/', '', $value);
-        if (!preg_match('/^\+?[0-9]{10,15}$/', $phoneClean)) {
-            return ['valid' => false, 'error' => 'Numéro de téléphone invalide.'];
+        if (!preg_match('/^\+?[0-9]{8,15}$/', $phoneClean)) {
+            return ['valid' => false, 'error' => 'Numero de telephone invalide.'];
         }
         
         return ['valid' => true, 'error' => ''];

@@ -87,8 +87,8 @@ final class SettingsController extends Controller
 
                 if ($phone !== '') {
                     $phoneClean = preg_replace('/[\s\-\.\(\)]+/', '', $phone);
-                    if (!preg_match('/^\+?[0-9]{10,15}$/', $phoneClean)) {
-                        $errors['phone'] = 'Numéro de téléphone invalide.';
+                    if (!preg_match('/^\+?[0-9]{8,15}$/', $phoneClean)) {
+                        $errors['phone'] = 'Numero de telephone invalide.';
                     }
                 }
 

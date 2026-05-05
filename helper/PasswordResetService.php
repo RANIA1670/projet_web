@@ -114,6 +114,11 @@ class PasswordResetService
     {
         // Validation simple du format de numéro de téléphone
         // Accepte les formats: +33612345678, 0612345678, etc.
-        return preg_match('/^(\+?\d{1,3}[-\s]?)?\d{9,15}$/', $phone);
+        $normalized = preg_replace('/\D+/', '', $phone);
+        if (!is_string($normalized)) {
+            return false;
+        }
+
+        return preg_match('/^[0-9]{8,15}$/', $normalized) === 1;
     }
 }

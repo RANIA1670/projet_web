@@ -40,6 +40,18 @@ function cityzen_find_user_by_login(?string $user): ?array
         $stmt->execute([$user, $user, $user, $user, $user, $user]);
         $row = $stmt->fetch();
 
+        // Support login by numeric account id when user types an id in the login field.
+        if (!is_array($row) && ctype_digit($user)) {
+            $stmtById = $pdo->prepare(
+                'SELECT id, username, full_name, email, birth_date, postal_code, city, phone, profile_photo, password_hash, role, blocked, created_at, updated_at
+                 FROM users
+                 WHERE id = ?
+                 LIMIT 1'
+            );
+            $stmtById->execute([(int) $user]);
+            $row = $stmtById->fetch();
+        }
+
         return is_array($row) ? $row : null;
     } catch (Exception) {
         return null;
@@ -77,6 +89,9 @@ function cityzen_agent_credentials(): array
 function cityzen_apply_session_user(array $row): void
 {
     cityzen_session_start();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
     $_SESSION['cityzen_user'] = [
         'id' => (int) ($row['id'] ?? 0),
         'username' => (string) ($row['username'] ?? ''),
@@ -160,7 +175,27 @@ function cityzen_agent_login(string $user, string $pass): bool
 function cityzen_agent_logout(): void
 {
     cityzen_session_start();
-    unset($_SESSION['cityzen_user'], $_SESSION['cityzen_agent']);
+
+    // Clear all session values.
+    $_SESSION = [];
+
+    // Remove the session cookie when cookies are used.
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'] ?? '/',
+            $params['domain'] ?? '',
+            (bool) ($params['secure'] ?? false),
+            (bool) ($params['httponly'] ?? true)
+        );
+    }
+
+    // Destroy current session and start a clean one.
+    session_destroy();
+    cityzen_session_start();
 }
 
 function cityzen_csrf_token(): string

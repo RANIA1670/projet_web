@@ -527,23 +527,93 @@ function cityzen_mark_reset_code_used(string $code): bool
     }
 }
 
+function cityzen_normalize_phone_input(string $value): string
+{
+    $raw = trim($value);
+    if ($raw === '') {
+        return '';
+    }
+
+    $raw = str_replace(["\t", "\r", "\n"], '', $raw);
+    if (str_starts_with($raw, '00')) {
+        $raw = '+' . substr($raw, 2);
+    }
+
+    $hasPlus = str_starts_with($raw, '+');
+    $digits = preg_replace('/\D+/', '', $raw);
+    if (!is_string($digits) || $digits === '') {
+        return '';
+    }
+
+    return $hasPlus ? ('+' . $digits) : $digits;
+}
+
+/**
+ * @return string[]
+ */
+function cityzen_phone_lookup_keys(string $value): array
+{
+    $normalized = cityzen_normalize_phone_input($value);
+    if ($normalized === '') {
+        return [];
+    }
+
+    $digits = ltrim($normalized, '+');
+    $keys = [$digits];
+
+    // FR: 06.. <-> +336.. compatibility
+    if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
+        $keys[] = '33' . substr($digits, 1);
+    }
+    if (strlen($digits) === 11 && str_starts_with($digits, '33')) {
+        $keys[] = '0' . substr($digits, 2);
+    }
+
+    return array_values(array_unique($keys));
+}
+
 function cityzen_find_user_by_email_or_phone(string $identifier): array
 {
     try {
         $pdo = cityzen_db();
+        $identifier = trim($identifier);
+        if ($identifier === '') {
+            return ['ok' => false, 'error' => 'Identifiant vide.'];
+        }
         
         $stmt = $pdo->prepare('
             SELECT id, username, email, phone, full_name 
             FROM users 
-            WHERE email = ? OR phone = ? OR username = ?
+            WHERE email = ? OR username = ?
             LIMIT 1
         ');
         
-        $stmt->execute([$identifier, $identifier, $identifier]);
+        $stmt->execute([$identifier, $identifier]);
         $user = $stmt->fetch();
         
         if ($user) {
             return ['ok' => true, 'user' => $user];
+        }
+
+        $wantedKeys = cityzen_phone_lookup_keys($identifier);
+        if ($wantedKeys !== []) {
+            $usersStmt = $pdo->query('
+                SELECT id, username, email, phone, full_name
+                FROM users
+                WHERE phone IS NOT NULL AND phone <> ""
+            ');
+
+            foreach ($usersStmt as $row) {
+                $rowPhone = (string) ($row['phone'] ?? '');
+                $rowKeys = cityzen_phone_lookup_keys($rowPhone);
+                if ($rowKeys === []) {
+                    continue;
+                }
+
+                if (array_intersect($wantedKeys, $rowKeys) !== []) {
+                    return ['ok' => true, 'user' => $row];
+                }
+            }
         }
         
         return ['ok' => false, 'error' => 'Aucun utilisateur trouvé avec cet identifiant.'];

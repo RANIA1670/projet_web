@@ -374,8 +374,8 @@ final class AuthController extends Controller
                     $contact = trim((string) ($_POST['phone'] ?? ''));
                     $old['phone'] = $contact;
                     
-                    if (!preg_match('/^(\+?\d{1,3}[-\s]?)?\d{9,15}$/', $contact)) {
-                        $errors['phone'] = 'NumÃ©ro de tÃ©lÃ©phone invalide.';
+                    if ($contact !== '' && !preg_match('/^(\+?\d{1,3}[-\s]?)?\d{9,15}$/', $contact)) {
+                        $errors['phone'] = 'NumÃro de tÃlÃphone invalide.';
                     }
                 }
 

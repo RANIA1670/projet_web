@@ -147,7 +147,10 @@ unset($_SESSION['form_errors'], $_SESSION['password_errors'], $_SESSION['form_ol
 
               <div class="users-static-field">
                 <span>Acces direct</span>
-                <strong><a class="data-link" href="<?= htmlspecialchars((string) $qrProfile['target_url']) ?>" target="_blank" rel="noopener">Tester le lien du QR</a></strong>
+                <?php
+                  $qrTestHref = (string) ($qrProfile['target_path'] ?? $qrProfile['target_url'] ?? '#');
+                ?>
+                <strong><a class="data-link" href="<?= htmlspecialchars($qrTestHref) ?>" target="_blank" rel="noopener">Tester le lien du QR</a></strong>
               </div>
 
               <p class="qr-profile-note">Le QR contient un jeton technique (pas vos donnees en clair). Si l&apos;agent n&apos;est pas connecte, il sera redirige vers la connexion.</p>
