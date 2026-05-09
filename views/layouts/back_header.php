@@ -30,6 +30,8 @@
            <?= str_contains($page??'','back_sponsor')?'class="actif"':'' ?>>💼 Sponsors</a>
         <a href="index.php?page=back_participation_liste"
            <?= str_contains($page??'','back_participation')?'class="actif"':'' ?>>👥 Participations</a>
+        <a href="index.php?page=back_avis_liste"
+           <?= str_contains($page??'','back_avis')?'class="actif"':'' ?>>⭐ Avis & Notations</a>
     </div>
 
     <!-- Contenu principal injecté ici -->

@@ -13,6 +13,7 @@
     <span class="nav-logo">City<span>Zen</span></span>
     <a href="index.php" <?= ($page??'')==='accueil'?'class="actif"':'' ?>>Accueil</a>
     <a href="index.php?page=front_event_liste" <?= str_contains($page??'','front_event')?'class="actif"':'' ?>>Événements</a>
+    <a href="index.php?page=front_calendrier" <?= ($page??'')==='front_calendrier'?'class="actif"':'' ?>>📅 Calendrier</a>
     <a href="index.php?page=front_sponsor_liste" <?= ($page??'')==='front_sponsor_liste'?'class="actif"':'' ?>>Sponsors</a>
     <a href="index.php?page=back_dashboard" class="nav-admin">⚙ Admin</a>
 </nav>

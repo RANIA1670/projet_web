@@ -1,9 +1,16 @@
 <?php
 // ================================================
 //  VUE  : views/front/event/detail.php
-//  RÔLE : Détail d'un événement + formulaire inscription
-//         Validation PHP — PAS HTML5
+//  RÔLE : Détail d'un événement + inscription + billet + avis
 // ================================================
+
+require_once __DIR__ . '/../../../models/AvisModel.php';
+
+$avisModel  = new AvisModel();
+$avgNote    = $avisModel->getAverageNote((int)$event['id_event']);
+$nbAvis     = $avisModel->countByEvent((int)$event['id_event']);
+$avisListe  = $avisModel->findByEvent((int)$event['id_event']);
+
 $titrePage = htmlspecialchars($event['titre']);
 require __DIR__ . '/../../layouts/front_header.php';
 ?>
@@ -20,6 +27,31 @@ require __DIR__ . '/../../layouts/front_header.php';
         <p><span class="detail-label">💼 Sponsor :</span>
             <span class="sponsor-badge"><?= htmlspecialchars($event['nom_sponsor']) ?></span>
         </p>
+
+        <!-- Note moyenne -->
+        <?php if ($nbAvis > 0): ?>
+            <p style="margin-top:12px;">
+                <span class="detail-label">⭐ Note :</span>
+                <span style="color:#E67E22;font-size:1.1rem;letter-spacing:2px;margin-right:6px;">
+                    <?php
+                        $rounded = round($avgNote);
+                        echo str_repeat('★', (int)$rounded) . str_repeat('☆', 5 - (int)$rounded);
+                    ?>
+                </span>
+                <strong><?= $avgNote ?>/5</strong>
+                <span style="color:#94a3b8;font-size:.85rem;">(<?= $nbAvis ?> avis)</span>
+                <a href="index.php?page=front_avis_noter&id_event=<?= $event['id_event'] ?>"
+                   style="margin-left:12px;font-size:.83rem;color:#1e3a5f;text-decoration:underline;">
+                    Voir les avis →
+                </a>
+            </p>
+        <?php else: ?>
+            <p style="margin-top:12px;">
+                <span class="detail-label">⭐ Note :</span>
+                <span style="color:#94a3b8;font-size:.88rem;">Aucun avis pour le moment</span>
+            </p>
+        <?php endif; ?>
+
         <p style="margin-top:12px;"><span class="detail-label">📝 Description :</span></p>
         <p style="margin-top:6px; color:#555; line-height:1.7;">
             <?= nl2br(htmlspecialchars($event['description'])) ?>
@@ -56,7 +88,37 @@ require __DIR__ . '/../../layouts/front_header.php';
         <h2>📩 S'inscrire à cet événement</h2>
 
         <?php if ($succes): ?>
-            <div class="msg-succes">✅ Inscription réussie ! Vous participez à cet événement.</div>
+            <?php
+                // Récupérer l'id_participation inséré pour le billet
+                require_once __DIR__ . '/../../../models/ParticipationModel.php';
+                $pm    = new ParticipationModel();
+                $lastP = $pm->findByEmailAndEvent($email_p, (int)$event['id_event']);
+                $lastId = $lastP ? $lastP['id_participation'] : 0;
+            ?>
+            <div class="msg-succes">
+                ✅ Inscription réussie ! Vous participez à cet événement.
+            </div>
+
+            <!-- Bouton Billet PDF -->
+            <?php if ($lastId > 0): ?>
+            <div style="margin:20px 0;padding:20px 24px;background:linear-gradient(135deg,#fff7ed,#fef3e2);border:1px solid #fed7aa;border-radius:14px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+                <div>
+                    <div style="font-weight:700;color:#1e3a5f;margin-bottom:4px;">🎫 Votre billet est prêt !</div>
+                    <div style="color:#64748b;font-size:.88rem;">Téléchargez-le et présentez-le à l'entrée de l'événement.</div>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <a href="index.php?page=ticket_download&id_participation=<?= $lastId ?>"
+                       style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#E67E22,#d35400);color:#fff;padding:12px 24px;border-radius:50px;text-decoration:none;font-weight:700;font-size:.95rem;box-shadow:0 4px 16px rgba(230,126,34,.35);">
+                        ⬇️ Télécharger le billet PDF
+                    </a>
+                    <a href="index.php?page=front_avis_noter&id_event=<?= $event['id_event'] ?>&id_participation=<?= $lastId ?>"
+                       style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1e3a5f,#2d4f7c);color:#fff;padding:12px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:.95rem;">
+                        ⭐ Laisser un avis
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+
         <?php endif; ?>
 
         <?php if (!empty($erreurs)): ?>
@@ -71,11 +133,9 @@ require __DIR__ . '/../../layouts/front_header.php';
         <?php endif; ?>
 
         <div class="form-box">
-            <!-- action pointe vers ce même contrôleur avec l'ID -->
             <form method="POST" action="index.php?page=front_event_detail&id=<?= $event['id_event'] ?>">
 
                 <label for="nom_participant">Votre nom complet *</label>
-                <!-- PAS d'attribut required HTML5 — validation 100% PHP -->
                 <input type="text" id="nom_participant" name="nom_participant"
                        placeholder="Ex : Ali Ben Salah"
                        value="<?= htmlspecialchars($nom_p ?? '') ?>">
@@ -116,6 +176,49 @@ require __DIR__ . '/../../layouts/front_header.php';
             </form>
         </div>
     </div>
+
+    <!-- Section avis approuvés -->
+    <?php if (!empty($avisListe)): ?>
+    <div style="margin-top:48px;">
+        <h2>
+            💬 Avis des participants
+            <a href="index.php?page=front_avis_noter&id_event=<?= $event['id_event'] ?>"
+               style="font-size:.8rem;font-weight:500;color:#E67E22;text-decoration:none;margin-left:12px;">
+                + Laisser un avis
+            </a>
+        </h2>
+
+        <?php foreach ($avisListe as $a): ?>
+            <div style="background:#fff;border:1px solid #e8edf2;border-radius:14px;padding:18px 22px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.04);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong style="color:#1e3a5f;"><?= htmlspecialchars($a['nom_participant']) ?></strong>
+                    <div>
+                        <span style="color:#E67E22;font-size:1rem;letter-spacing:2px;">
+                            <?= str_repeat('★', (int)$a['note']) . str_repeat('☆', 5 - (int)$a['note']) ?>
+                        </span>
+                        <span style="color:#94a3b8;font-size:.8rem;margin-left:8px;">
+                            <?= date('d/m/Y', strtotime($a['date_avis'])) ?>
+                        </span>
+                    </div>
+                </div>
+                <p style="color:#444;line-height:1.7;margin:0;font-size:.93rem;">
+                    <?= nl2br(htmlspecialchars($a['commentaire'])) ?>
+                </p>
+            </div>
+        <?php endforeach; ?>
+
+        <a href="index.php?page=front_avis_noter&id_event=<?= $event['id_event'] ?>"
+           style="display:inline-block;margin-top:4px;color:#1e3a5f;font-size:.88rem;text-decoration:underline;">
+            Voir tous les avis & laisser le vôtre →
+        </a>
+    </div>
+    <?php else: ?>
+    <div style="margin-top:36px;padding:20px 24px;background:#f8fafc;border-radius:12px;border:1px dashed #e2e8f0;text-align:center;">
+        <p style="color:#94a3b8;margin:0 0 12px;">Aucun avis pour l'instant. Soyez le premier à noter cet événement !</p>
+        <a href="index.php?page=front_avis_noter&id_event=<?= $event['id_event'] ?>"
+           class="btn btn-bleu" style="font-size:.88rem;">⭐ Laisser un avis</a>
+    </div>
+    <?php endif; ?>
 
 </div>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>

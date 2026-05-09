@@ -10,6 +10,9 @@
 require_once __DIR__ . '/controllers/EventController.php';
 require_once __DIR__ . '/controllers/SponsorController.php';
 require_once __DIR__ . '/controllers/ParticipationController.php';
+require_once __DIR__ . '/controllers/TicketController.php';
+require_once __DIR__ . '/controllers/AvisController.php';
+require_once __DIR__ . '/controllers/ApiController.php';
 
 // Lire la page demandée (défaut : accueil)
 $page = $_GET['page'] ?? 'accueil';
@@ -96,6 +99,43 @@ switch ($page) {
     // ===== BACK OFFICE — Dashboard =====
     case 'back_dashboard':
         require __DIR__ . '/views/back/dashboard.php';
+        break;
+
+    // ===== BILLETS PDF + QR CODE =====
+    case 'ticket_download':
+        (new TicketController())->download();
+        break;
+
+    case 'ticket_confirmation':
+        (new TicketController())->confirmation();
+        break;
+
+    // ===== AVIS & NOTATION =====
+    case 'front_avis_noter':
+        (new AvisController())->frontNoter();
+        break;
+
+    case 'back_avis_liste':
+        (new AvisController())->backListe();
+        break;
+
+    case 'back_avis_approuver':
+        (new AvisController())->backApprouver();
+        break;
+
+    case 'back_avis_rejeter':
+        (new AvisController())->backRejeter();
+        break;
+
+    // ===== CALENDRIER INTERACTIF =====
+    case 'front_calendrier':
+        $titrePage = 'Calendrier';
+        require __DIR__ . '/views/front/calendrier.php';
+        break;
+
+    // ===== API JSON (FullCalendar) =====
+    case 'api_events_json':
+        (new ApiController())->eventsJson();
         break;
 
     default:

@@ -293,4 +293,21 @@ class ParticipationModel extends Model
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    /**
+     * Retrouve la participation la plus récente par email + événement.
+     * Utilisée après inscription pour générer le lien de billet PDF.
+     */
+    public function findByEmailAndEvent(string $email, int $idEvent): array|false
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM participation
+             WHERE email_participant = :email AND id_event = :id_event
+             ORDER BY id_participation DESC
+             LIMIT 1'
+        );
+        $stmt->execute([':email' => $email, ':id_event' => $idEvent]);
+        return $stmt->fetch();
+    }
 }
+
