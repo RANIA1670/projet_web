@@ -4,6 +4,8 @@
 //  RÔLE : Tableau de bord administrateur
 // ================================================
 
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../services/WeatherMapService.php';
 require_once __DIR__ . '/../../models/EventModel.php';
 require_once __DIR__ . '/../../models/SponsorModel.php';
 require_once __DIR__ . '/../../models/ParticipationModel.php';
@@ -21,9 +23,16 @@ $activeSponsors = $sponsorModel->countActiveSponsors();
 $topSponsors   = $eventModel->getTopSponsors(3);
 $popularEvents = $eventModel->getPopularEvents(3);
 $recents       = $participationModel->findRecent(5);
+$upcomingEvents = $eventModel->findEventsInDays(7);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 $msg           = $_GET['msg'] ?? '';
 $sent          = (int)($_GET['sent'] ?? 0);
 $failed        = (int)($_GET['failed'] ?? 0);
+$mailErrors    = $_SESSION['mail_errors'] ?? [];
+unset($_SESSION['mail_errors']);
 
 $upcomingPercent = $nbEvents > 0 ? round($upcoming7Days * 100 / $nbEvents) : 0;
 $activeSponsorPercent = $nbSpons > 0 ? round($activeSponsors * 100 / $nbSpons) : 0;
@@ -50,6 +59,16 @@ require __DIR__ . '/../layouts/back_header.php';
         ✅ Rappels envoyés : <?= $sent ?> email(s)
         <?php if ($failed > 0): ?> - <?= $failed ?> échec(s)<?php endif; ?>.
     </div>
+    <?php if (!empty($mailErrors)): ?>
+        <div class="msg-erreur" style="background:#f8d7da;color:#842029;padding:14px;border:1px solid #f5c2c7;border-radius:6px;margin-bottom:20px;">
+            <strong>Erreurs d'envoi :</strong>
+            <ul style="margin:8px 0 0 18px;">
+                <?php foreach ($mailErrors as $error): ?>
+                    <li><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
 <?php endif; ?>
 
 <h1>🏠 Tableau de bord</h1>
@@ -82,6 +101,39 @@ require __DIR__ . '/../layouts/back_header.php';
     <a href="index.php?page=back_participation_ajouter" class="btn btn-orange">➕ Ajouter une participation</a>
     <a href="index.php?page=back_event_envoyer_rappels" class="btn btn-gris">📧 Envoyer rappels</a>
 </div>
+
+<?php if (!empty($upcomingEvents)): ?>
+    <h2 style="margin-bottom:12px;">☁️ Météo & carte des événements à venir</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:32px;">
+        <?php foreach ($upcomingEvents as $event): ?>
+            <?php $weather = WeatherMapService::getWeatherForLocation($event['lieu']); ?>
+            <?php $mapUrl = WeatherMapService::getStaticMapUrl($event['lieu']); ?>
+            <?php $mapsLink = WeatherMapService::getGoogleMapsLink($event['lieu']); ?>
+            <div class="card" style="padding:18px;">
+                <h3 style="margin-top:0;"><?= htmlspecialchars($event['titre']) ?></h3>
+                <p style="margin:.3rem 0 0;">📅 <?= date('d/m/Y', strtotime($event['date_event'])) ?> — 📍 <?= htmlspecialchars($event['lieu']) ?></p>
+                <p style="margin:.5rem 0 1rem;color:#666;">Sponsor : <?= htmlspecialchars($event['nom_sponsor']) ?></p>
+
+                <?php if ($weather !== null): ?>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <img src="<?= htmlspecialchars($weather['icon'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($weather['description'], ENT_QUOTES, 'UTF-8') ?>" width="60" height="60">
+                        <div>
+                            <strong><?= $weather['temp'] ?>°C</strong><br>
+                            <?= htmlspecialchars($weather['description'], ENT_QUOTES, 'UTF-8') ?>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div style="margin-bottom:12px;color:#888;">Météo non disponible. Ajoute une clé OpenWeatherMap dans config.php.</div>
+                <?php endif; ?>
+
+                <a href="<?= htmlspecialchars($mapsLink, ENT_QUOTES, 'UTF-8') ?>" target="_blank" style="display:block;margin-bottom:12px;color:#1a73e8;">Voir sur Google Maps</a>
+                <div style="border:1px solid #eaeaea;border-radius:10px;overflow:hidden;">
+                    <img src="<?= htmlspecialchars($mapUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Carte de <?= htmlspecialchars($event['lieu'], ENT_QUOTES, 'UTF-8') ?>" style="width:100%;height:auto;display:block;">
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
 
 <div class="kpi-grid" style="margin-bottom:32px;">
     <div class="kpi-card violet">

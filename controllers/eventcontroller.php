@@ -1,5 +1,5 @@
 <?php
-// ================================================
+// ================================================7
 //  FICHIER  : controllers/EventController.php
 //  RÔLE     : Gère toutes les actions liées aux events
 // ================================================
@@ -179,27 +179,79 @@ class EventController
 
     public function backEnvoyerRappels(): void
     {
-        $events = $this->model->findEventsInDays(3);
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $events = $this->model->findEventsInDays(7); // Correction : 7 jours au lieu de 3
         $sent = 0;
         $failed = 0;
+        $errors = [];
 
         foreach ($events as $event) {
             $participants = (new ParticipationModel())->findByEvent($event['id_event']);
             foreach ($participants as $participant) {
                 $to = $participant['email_participant'];
-                $subject = 'Rappel : événement dans 3 jours – ' . $event['titre'];
+                $subject = 'Rappel : événement dans 7 jours – ' . $event['titre']; // Correction : 7 jours
                 $message = "Bonjour {$participant['nom_participant']},\n\n" .
                            "Ceci est un rappel que l'événement \"{$event['titre']}\" aura lieu le {$event['date_event']} à {$event['lieu']}.\n\n" .
                            "Merci de votre participation,\nL'équipe CityZen";
                 $headers = 'From: no-reply@cityzen.local\r\n' .
-                           'Reply-To: no-reply@cityzen.local\r\n';
+                           'Reply-To: no-reply@cityzen.local\r\n' .
+                           'Content-Type: text/plain; charset=UTF-8\r\n'; // Ajout pour éviter les problèmes d'encodage
 
-                if (@mail($to, $subject, $message, $headers)) {
-                    $sent++;
+                // Utilisation de PHPMailer pour un envoi plus fiable (si installé)
+                if (file_exists(__DIR__ . '/../phpmailer/PHPMailer-master/src/PHPMailer.php')) {
+                    require_once __DIR__ . '/../phpmailer/PHPMailer-master/src/PHPMailer.php';
+                    require_once __DIR__ . '/../phpmailer/PHPMailer-master/src/SMTP.php';
+                    require_once __DIR__ . '/../phpmailer/PHPMailer-master/src/Exception.php';
+
+                    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+                    try {
+                        $mail->isSMTP();
+                        $mail->Host = 'smtp.gmail.com'; // Exemple : remplace par ton serveur SMTP
+                        $mail->SMTPAuth = true;
+                        $mail->Username = 'ibrahimzarrouk27@gmail.com'; // Remplace par ton email
+                        $mail->Password = 'akdzwvgzayqjrbgg'; // Remplace par ton mot de passe (ou app password)
+                        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                        $mail->Port = 587;
+                        $mail->SMTPOptions = [
+                            'ssl' => [
+                                'verify_peer' => false,
+                                'verify_peer_name' => false,
+                                'allow_self_signed' => true,
+                            ],
+                        ];
+
+                        $mail->setFrom('ibrahimzarrouk27@gmail.com', 'CityZen');
+                        $mail->addAddress($to);
+                        $mail->Subject = $subject;
+                        $mail->Body = $message;
+
+                        $mail->send();
+                        $sent++;
+                    } catch (Exception $e) {
+                        $failed++;
+                        $errors[] = "Erreur SMTP pour $to : " . $mail->ErrorInfo;
+                        error_log("Erreur envoi mail à $to : " . $mail->ErrorInfo);
+                    }
                 } else {
-                    $failed++;
+                    // Fallback avec mail() natif (mais moins fiable sur XAMPP)
+                    if (@mail($to, $subject, $message, $headers)) {
+                        $sent++;
+                    } else {
+                        $failed++;
+                        $errors[] = "Erreur mail natif pour $to";
+                        error_log("Erreur envoi mail natif à $to");
+                    }
                 }
             }
+        }
+
+        if (!empty($errors)) {
+            $_SESSION['mail_errors'] = $errors;
+        } else {
+            unset($_SESSION['mail_errors']);
         }
 
         header('Location: index.php?page=back_dashboard&msg=rappels&sent=' . $sent . '&failed=' . $failed);

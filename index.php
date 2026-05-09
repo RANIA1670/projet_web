@@ -1,45 +1,104 @@
 <?php
-// index.php - Routeur principal pour la gestion d'événements
-require_once __DIR__ . '/config/config.php';
-require_once __DIR__ . '/config/database.php';
+// ================================================
+//  FICHIER  : index.php  (Front Router)
+//  RÔLE     : Point d'entrée unique du projet
+//             Lit le paramètre ?page= et dispatch
+//             vers le bon contrôleur/action
+// ================================================
 
-$controller = isset($_GET['controller']) ? $_GET['controller'] : 'event';
-$action = isset($_GET['action']) ? $_GET['action'] : 'index';
-$id = isset($_GET['id']) ? $_GET['id'] : null;
+// Charger les contrôleurs
+require_once __DIR__ . '/controllers/EventController.php';
+require_once __DIR__ . '/controllers/SponsorController.php';
+require_once __DIR__ . '/controllers/ParticipationController.php';
 
-switch($controller) {
-    case 'event':
-        require_once __DIR__ . '/controllers/EventController.php';
-        $controllerInstance = new EventController();
-        switch($action) {
-            case 'index': $controllerInstance->index(); break;
-            case 'show': $controllerInstance->show($id); break;
-            case 'create': $controllerInstance->create(); break;
-            case 'edit': $controllerInstance->edit($id); break;
-            case 'delete': $controllerInstance->delete($id); break;
-            default: $controllerInstance->index();
-        }
+// Lire la page demandée (défaut : accueil)
+$page = $_GET['page'] ?? 'accueil';
+
+// ---- Dispatch : choisir le bon contrôleur ----
+switch ($page) {
+
+    // ===== FRONT OFFICE =====
+    case 'accueil':
+        require __DIR__ . '/views/front/accueil.php';
         break;
-    case 'sponsor':
-        require_once __DIR__ . '/controllers/SponsorController.php';
-        $controllerInstance = new SponsorController();
-        switch($action) {
-            case 'index': $controllerInstance->index(); break;
-            case 'create': $controllerInstance->create(); break;
-            default: $controllerInstance->index();
-        }
+
+    case 'front_event_liste':
+        (new EventController())->frontListe();
         break;
-    case 'participation':
-        require_once __DIR__ . '/controllers/ParticipationController.php';
-        $controllerInstance = new ParticipationController();
-        switch($action) {
-            case 'index': $controllerInstance->index(); break;
-            case 'register': $controllerInstance->register(); break;
-            default: $controllerInstance->index();
-        }
+
+    case 'front_event_detail':
+        (new EventController())->frontDetail();
         break;
+
+    case 'front_sponsor_liste':
+        (new SponsorController())->frontListe();
+        break;
+
+    // ===== BACK OFFICE — EVENTS =====
+    case 'back_event_liste':
+        (new EventController())->backListe();
+        break;
+
+    case 'back_event_ajouter':
+        (new EventController())->backAjouter();
+        break;
+
+    case 'back_event_modifier':
+        (new EventController())->backModifier();
+        break;
+
+    case 'back_event_supprimer':
+        (new EventController())->backSupprimer();
+        break;
+
+    case 'back_event_export_pdf':
+        (new EventController())->backExportPdf();
+        break;
+
+    case 'back_event_envoyer_rappels':
+        (new EventController())->backEnvoyerRappels();
+        break;
+
+    // ===== BACK OFFICE — SPONSORS =====
+    case 'back_sponsor_liste':
+        (new SponsorController())->backListe();
+        break;
+
+    case 'back_sponsor_ajouter':
+        (new SponsorController())->backAjouter();
+        break;
+
+    case 'back_sponsor_modifier':
+        (new SponsorController())->backModifier();
+        break;
+
+    case 'back_sponsor_supprimer':
+        (new SponsorController())->backSupprimer();
+        break;
+
+    // ===== BACK OFFICE — PARTICIPATIONS =====
+    case 'back_participation_liste':
+        (new ParticipationController())->backListe();
+        break;
+
+    case 'back_participation_ajouter':
+        (new ParticipationController())->backAjouter();
+        break;
+
+    case 'back_participation_modifier':
+        (new ParticipationController())->backModifier();
+        break;
+
+    case 'back_participation_supprimer':
+        (new ParticipationController())->backSupprimer();
+        break;
+
+    // ===== BACK OFFICE — Dashboard =====
+    case 'back_dashboard':
+        require __DIR__ . '/views/back/dashboard.php';
+        break;
+
     default:
-        echo "<h1>404 - Page non trouvée</h1>";
-        echo "<p>Le controller '$controller' n'existe pas.</p>";
+        require __DIR__ . '/views/front/accueil.php';
+        break;
 }
-?>
