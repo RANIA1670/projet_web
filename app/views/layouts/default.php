@@ -20,6 +20,9 @@
 
     <!-- Main CSS -->
     <link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/main.css">
+
+    <!-- Copilot CSS -->
+    <link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/copilot.css">
 </head>
 <body>
 
@@ -333,5 +336,15 @@ document.addEventListener('DOMContentLoaded', function() {
         #adminFloatBtn { padding: 13px; border-radius: 50%; }
     }
 </style>
+
+<!-- ========== COPILOT ZENO ========== -->
+<script>
+    window.COPILOT_APP_URL = '<?= APP_URL ?>';
+    window.COPILOT_USER_ROLE = '<?= $_SESSION['user_role'] ?? 'guest' ?>';
+    window.COPILOT_USER_NAME = '<?= htmlspecialchars($_SESSION['user_prenom'] ?? '') ?>';
+</script>
+<script src="<?= APP_URL ?>/public/assets/js/copilot-kb.js"></script>
+<script src="<?= APP_URL ?>/public/assets/js/copilot.js"></script>
+
 </body>
 </html>

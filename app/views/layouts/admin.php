@@ -476,5 +476,16 @@
     const sidebar = document.getElementById('adminSidebar');
     if (toggle) toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
 </script>
+
+<!-- ========== COPILOT ZENO ========== -->
+<link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/copilot.css">
+<script>
+    window.COPILOT_APP_URL = '<?= APP_URL ?>';
+    window.COPILOT_USER_ROLE = '<?= $_SESSION['user_role'] ?? 'guest' ?>';
+    window.COPILOT_USER_NAME = '<?= htmlspecialchars($_SESSION['user_prenom'] ?? '') ?>';
+</script>
+<script src="<?= APP_URL ?>/public/assets/js/copilot-kb.js"></script>
+<script src="<?= APP_URL ?>/public/assets/js/copilot.js"></script>
+
 </body>
 </html>
