@@ -53,6 +53,11 @@ if ($pathOnly === '//') {
     $pathOnly = '/';
 }
 
+// Accès explicite à .../interventions/index.php → le routeur recevait "/index.php" (aucune route).
+if ($pathOnly === '/index.php' || str_ends_with($pathOnly, '/index.php')) {
+    $pathOnly = '/';
+}
+
 if (str_starts_with($pathOnly, '/backoffice')) {
     cityzen_require_agent();
 }
