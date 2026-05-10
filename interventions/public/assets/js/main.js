@@ -7,8 +7,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ─── Navbar Scroll Effect ─── */
   const navbar = document.getElementById('mainNavbar');
-  if (navbar) {
-    const onScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 20);
+  const headerStack = document.querySelector('.interventions-header-stack');
+  if (headerStack || navbar) {
+    const onScroll = () => {
+      const y = window.scrollY > 12;
+      if (headerStack) headerStack.classList.toggle('is-scrolled', y);
+      if (navbar) navbar.classList.toggle('scrolled', y);
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
   }

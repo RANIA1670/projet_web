@@ -29,14 +29,19 @@ $cityzenIntervTopbar = dirname(__DIR__, 4) . '/events/views/layouts/cityzen_topb
 $interventionsHasPortalTopbar = is_file($cityzenIntervTopbar);
 ?>
 <body <?= $interventionsHasPortalTopbar ? 'class="interventions-has-portal-topbar"' : '' ?>>
-<?php if ($interventionsHasPortalTopbar) {
+<?php if ($interventionsHasPortalTopbar): ?>
+<div class="interventions-header-stack">
+<?php
+    $cityzen_nav_active = 'interventions_gestion';
     include $cityzenIntervTopbar;
-} ?>
+?>
+<?php endif; ?>
 
 <!-- ========== NAVBAR ========== -->
-<nav class="navbar" id="mainNavbar">
+<nav class="navbar <?= $interventionsHasPortalTopbar ? 'navbar--with-portal' : '' ?>" id="mainNavbar">
     <div class="container navbar-inner">
-        <!-- Brand -->
+        <?php if (!$interventionsHasPortalTopbar): ?>
+        <!-- Brand (sans barre portail : identité locale) -->
         <a href="<?= APP_URL ?>/" class="navbar-brand">
             <div class="brand-icon">
                 <i class="fas fa-city"></i>
@@ -46,12 +51,13 @@ $interventionsHasPortalTopbar = is_file($cityzenIntervTopbar);
                 <span class="brand-tagline">Smart City</span>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- Nav Links -->
         <ul class="nav-links" id="navLinks">
             <li>
                 <a href="<?= APP_URL ?>/" class="nav-link <?= (!isset($_SERVER['REQUEST_URI']) || parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) === '/fati/public/' || parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) === '/fati/public/index.php') ? 'active' : '' ?>">
-                    <i class="fas fa-home"></i> Accueil
+                    <i class="fas fa-home"></i> <?= $interventionsHasPortalTopbar ? 'Vue d’ensemble' : 'Accueil' ?>
                 </a>
             </li>
             <li>
@@ -136,6 +142,9 @@ $interventionsHasPortalTopbar = is_file($cityzenIntervTopbar);
         </button>
     </div>
 </nav>
+<?php if ($interventionsHasPortalTopbar): ?>
+</div>
+<?php endif; ?>
 
 <!-- Flash Message -->
 <?php if (isset($flash) && $flash): ?>
