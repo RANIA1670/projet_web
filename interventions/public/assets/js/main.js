@@ -5,31 +5,6 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-  /* ─── Navbar Scroll Effect ─── */
-  const navbar = document.getElementById('mainNavbar');
-  const headerStack = document.querySelector('.interventions-header-stack');
-  if (headerStack || navbar) {
-    const onScroll = () => {
-      const y = window.scrollY > 12;
-      if (headerStack) headerStack.classList.toggle('is-scrolled', y);
-      if (navbar) navbar.classList.toggle('scrolled', y);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-  }
-
-  /* ─── Mobile Nav Toggle ─── */
-  const navToggle  = document.getElementById('navToggle');
-  const navLinks   = document.getElementById('navLinks');
-  const navActions = document.querySelector('.nav-actions');
-  if (navToggle && navLinks) {
-    navToggle.addEventListener('click', () => {
-      const open = navLinks.classList.toggle('open');
-      if (navActions) navActions.classList.toggle('open', open);
-      navToggle.classList.toggle('active', open);
-    });
-  }
-
   /* ─── User Dropdown ─── */
   const userDropBtn  = document.getElementById('userDropBtn');
   const userDropMenu = document.getElementById('userDropMenu');
@@ -192,28 +167,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 4500);
   }
 
-  /* ─── Active nav link highlight ─── */
-  const currentPath = window.location.pathname;
-  document.querySelectorAll('.nav-link').forEach(link => {
-    const href = link.getAttribute('href');
-    if (href && href !== '/' && currentPath.includes(href.split('/').pop())) {
-      link.classList.add('active');
-    }
-  });
-
   /* ─── Smooth scroll for anchor links ─── */
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', (e) => {
       const target = document.querySelector(a.getAttribute('href'));
       if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    });
-  });
-
-  /* ─── Auto-hide nav on mobile when link clicked ─── */
-  document.querySelectorAll('.nav-link').forEach(l => {
-    l.addEventListener('click', () => {
-      if (navLinks) navLinks.classList.remove('open');
-      if (navToggle) navToggle.classList.remove('active');
     });
   });
 

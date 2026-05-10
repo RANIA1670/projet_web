@@ -1,0 +1,10 @@
+/* Rétablit les styles globaux CityZen après main.css du module */
+body.interventions-module-public {
+  margin: 0;
+  font-family: "Nunito Sans", sans-serif;
+  background: radial-gradient(circle at top, #f8f6f0 0%, #f4f1ea 58%);
+  color: var(--ink, #243b53);
+  line-height: 1.55;
+  min-height: 100vh;
+  overflow-x: hidden;
+}

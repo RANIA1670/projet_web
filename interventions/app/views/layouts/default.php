@@ -1,366 +1,138 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CityZen - Plateforme intelligente de gestion des interventions et signalements urbains. Signalez, suivez et gérez les problèmes de votre ville.">
-    <meta name="keywords" content="smart city, signalement, intervention urbaine, gestion ville, citoyens">
-    <meta name="author" content="CityZen Team">
-    <meta property="og:title" content="CityZen - <?= htmlspecialchars($pageTitle ?? 'Smart Intervention Management') ?>">
-    <meta property="og:description" content="Plateforme intelligente de gestion des interventions urbaines">
-    <title>CityZen | <?= htmlspecialchars($pageTitle ?? 'Accueil') ?></title>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-    <!-- Main CSS -->
-    <link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/main.css">
-
-    <!-- Copilot CSS -->
-    <link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/copilot.css">
-</head>
 <?php
-$cityzenIntervTopbar = dirname(__DIR__, 4) . '/events/views/layouts/cityzen_topbar.php';
-$interventionsHasPortalTopbar = is_file($cityzenIntervTopbar);
-?>
-<body <?= $interventionsHasPortalTopbar ? 'class="interventions-has-portal-topbar"' : '' ?>>
-<?php if ($interventionsHasPortalTopbar): ?>
-<div class="interventions-header-stack">
-<?php
-    $cityzen_nav_active = 'interventions_gestion';
-    include $cityzenIntervTopbar;
-?>
-<?php endif; ?>
+declare(strict_types=1);
 
-<!-- ========== NAVBAR ========== -->
-<nav class="navbar <?= $interventionsHasPortalTopbar ? 'navbar--with-portal' : '' ?>" id="mainNavbar">
-    <div class="container navbar-inner">
-        <?php if (!$interventionsHasPortalTopbar): ?>
-        <!-- Brand (sans barre portail : identité locale) -->
-        <a href="<?= APP_URL ?>/" class="navbar-brand">
-            <div class="brand-icon">
-                <i class="fas fa-city"></i>
-            </div>
-            <div class="brand-text">
-                <span class="brand-name">CityZen</span>
-                <span class="brand-tagline">Smart City</span>
-            </div>
-        </a>
-        <?php endif; ?>
+/**
+ * Aligné sur le module Événements : cityzen_render_head → site-shell → topbar citoyenne
+ * → sous-navigation module → main.page → footer CityZen (pas une page séparée).
+ */
 
-        <!-- Nav Links -->
-        <ul class="nav-links" id="navLinks">
-            <li>
-                <a href="<?= APP_URL ?>/" class="nav-link <?= (!isset($_SERVER['REQUEST_URI']) || parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) === '/fati/public/' || parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) === '/fati/public/index.php') ? 'active' : '' ?>">
-                    <i class="fas fa-home"></i> <?= $interventionsHasPortalTopbar ? 'Vue d’ensemble' : 'Accueil' ?>
-                </a>
-            </li>
-            <li>
-                <a href="<?= APP_URL ?>/signalements" class="nav-link">
-                    <i class="fas fa-exclamation-triangle"></i> Signalements
-                </a>
-            </li>
-            <li>
-                <a href="<?= APP_URL ?>/interventions" class="nav-link">
-                    <i class="fas fa-tools"></i> Interventions
-                </a>
-            </li>
-            <li>
-                <a href="<?= APP_URL ?>/suivi" class="nav-link">
-                    <i class="fas fa-search-location"></i> Suivi
-                </a>
-            </li>
-            <li>
-                <a href="<?= APP_URL ?>/contact" class="nav-link">
-                    <i class="fas fa-envelope"></i> Contact
-                </a>
-            </li>
-            <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
-            <li>
-                <a href="<?= APP_URL ?>/backoffice" class="btn btn-primary btn-sm" <?= (function_exists('cityzen_is_agent') && !cityzen_is_agent()) ? 'style="display:none;"' : '' ?>>
-                    <i class="fas fa-cog"></i> Admin
-                </a>
-            </li>
-            <?php endif; ?>
-        </ul>
+if (!function_exists('cityzen_render_head')) {
+    require_once dirname(__DIR__, 4) . '/core/layout.php';
+}
 
-        <!-- Nav Actions -->
-        <div class="nav-actions">
-            <!-- Widget Notifications -->
-            <?php if (isset($_SESSION['user_id'])): ?>
-            <div style="position:relative;">
-                <button id="notifBtn" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-dark); position:relative;">
-                    <i class="fas fa-bell"></i>
-                    <span id="notifBadge" style="display:none; position:absolute; top:-8px; right:-8px; background:var(--secondary); color:white; border-radius:50%; width:20px; height:20px; font-size:0.75rem; display:flex; align-items:center; justify-content:center; font-weight:bold;"></span>
-                </button>
-                <div id="notifDropdown" style="display:none; position:absolute; top:100%; right:0; background:white; border:1px solid var(--border-color); border-radius:8px; width:350px; max-height:400px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:1000;">
-                    <div style="padding:12px; border-bottom:1px solid var(--border-color); font-weight:600;">Notifications</div>
-                    <div id="notifList"></div>
-                    <div style="padding:12px; text-align:center; border-top:1px solid var(--border-color);">
-                        <a href="<?= APP_URL ?>/notifications" style="color:var(--secondary); text-decoration:none; font-size:0.9rem;">Voir toutes les notifications</a>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
+$pageTitle = isset($pageTitle) ? (string) $pageTitle : 'Interventions et signalements';
 
-            <a href="<?= APP_URL ?>/signalement/creer" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus"></i> Signaler
-            </a>
-            <?php if (isset($_SESSION['user_id'])): ?>
-                <div class="user-dropdown">
-                    <button class="user-btn" id="userDropBtn">
-                        <div class="user-avatar"><?= strtoupper(substr($_SESSION['user_prenom'] ?? 'U', 0, 1)) ?></div>
-                        <span><?= htmlspecialchars($_SESSION['user_prenom'] ?? '') ?></span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="dropdown-menu" id="userDropMenu">
-                        <div class="dropdown-header">
-                            <strong><?= htmlspecialchars(($_SESSION['user_prenom'] ?? '') . ' ' . ($_SESSION['user_nom'] ?? '')) ?></strong>
-                            <span><?= htmlspecialchars($_SESSION['user_email'] ?? '') ?></span>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <a href="<?= APP_URL ?>/auth/deconnexion" class="dropdown-item text-danger">
-                            <i class="fas fa-sign-out-alt"></i> Déconnexion
-                        </a>
-                    </div>
-                </div>
-            <?php else: ?>
-                <a href="<?= APP_URL ?>/auth/connexion" class="btn btn-outline btn-sm">
-                    <i class="fas fa-sign-in-alt"></i> Connexion
-                </a>
-            <?php endif; ?>
-        </div>
+$iPathRaw = strtolower((string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'));
+$baseSegment = strtolower((string) (parse_url(rtrim(APP_URL, '/'), PHP_URL_PATH) ?: ''));
+if ($baseSegment !== '' && str_starts_with($iPathRaw, $baseSegment)) {
+    $iPathRaw = substr($iPathRaw, strlen($baseSegment)) ?: '/';
+}
+$iPathNorm = '/' . trim($iPathRaw, '/');
 
-        <!-- Mobile Toggle -->
-        <button class="nav-toggle" id="navToggle" aria-label="Menu">
-            <span></span><span></span><span></span>
-        </button>
-    </div>
-</nav>
-<?php if ($interventionsHasPortalTopbar): ?>
-</div>
-<?php endif; ?>
-
-<!-- Flash Message -->
-<?php if (isset($flash) && $flash): ?>
-<div class="flash-container" id="flashContainer">
-    <div class="flash flash-<?= $flash['type'] ?>">
-        <i class="fas fa-<?= $flash['type'] === 'success' ? 'check-circle' : ($flash['type'] === 'error' ? 'times-circle' : 'info-circle') ?>"></i>
-        <span><?= htmlspecialchars($flash['message']) ?></span>
-        <button class="flash-close" onclick="this.parentElement.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-</div>
-<?php endif; ?>
-
-<!-- ========== MAIN CONTENT ========== -->
-<main class="main-content" id="mainContent">
-    <?= $content ?>
-</main>
-
-<!-- ========== FOOTER ========== -->
-<footer class="footer">
-    <div class="footer-top">
-        <div class="container footer-grid">
-            <!-- Brand -->
-            <div class="footer-col footer-brand">
-                <div class="footer-logo">
-                    <div class="brand-icon"><i class="fas fa-city"></i></div>
-                    <div class="brand-text">
-                        <span class="brand-name">CityZen</span>
-                        <span class="brand-tagline">Smart City</span>
-                    </div>
-                </div>
-                <p>Plateforme intelligente de gestion des interventions et signalements urbains. Ensemble, construisons une ville meilleure.</p>
-                <div class="social-links">
-                    <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-                </div>
-            </div>
-
-            <!-- Navigation -->
-            <div class="footer-col">
-                <h4>Navigation</h4>
-                <ul class="footer-nav">
-                    <li><a href="<?= APP_URL ?>/"><i class="fas fa-chevron-right"></i> Accueil</a></li>
-                    <li><a href="<?= APP_URL ?>/signalements"><i class="fas fa-chevron-right"></i> Signalements</a></li>
-                    <li><a href="<?= APP_URL ?>/signalement/creer"><i class="fas fa-chevron-right"></i> Signaler un problème</a></li>
-                    <li><a href="<?= APP_URL ?>/interventions"><i class="fas fa-chevron-right"></i> Interventions</a></li>
-                    <li><a href="<?= APP_URL ?>/suivi"><i class="fas fa-chevron-right"></i> Suivi</a></li>
-                    <li><a href="<?= APP_URL ?>/contact"><i class="fas fa-chevron-right"></i> Contact</a></li>
-                </ul>
-            </div>
-
-            <!-- Services -->
-            <div class="footer-col">
-                <h4>Services</h4>
-                <ul class="footer-nav">
-                    <li><a href="#"><i class="fas fa-chevron-right"></i> Voirie & Routes</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i> Éclairage Public</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i> Espaces Verts</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i> Eau & Assainissement</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i> Sécurité Urbaine</a></li>
-                </ul>
-            </div>
-
-            <!-- Contact -->
-            <div class="footer-col">
-                <h4>Contact</h4>
-                <ul class="footer-contact">
-                    <li><i class="fas fa-map-marker-alt"></i> 15 Avenue Habib Bourguiba, Tunis</li>
-                    <li><i class="fas fa-phone"></i> +216 71 000 001</li>
-                    <li><i class="fas fa-envelope"></i> contact@cityzen.tn</li>
-                    <li><i class="fas fa-clock"></i> Lun - Ven: 08h00 - 17h00</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        <div class="container footer-bottom-inner">
-            <p>&copy; <?= date('Y') ?> CityZen - Smart Intervention Management. Tous droits réservés.</p>
-            <div class="footer-badges">
-                <span class="badge-tech"><i class="fab fa-php"></i> PHP MVC</span>
-                <span class="badge-tech"><i class="fas fa-database"></i> MySQL</span>
-                <span class="badge-tech"><i class="fab fa-js"></i> AJAX</span>
-            </div>
-        </div>
-    </div>
-</footer>
-
-<!-- Main JS -->
-<script src="<?= APP_URL ?>/public/assets/js/main.js"></script>
-
-<!-- ========== WIDGET NOTIFICATIONS ========== -->
-<script>
-<?php if (isset($_SESSION['user_id'])): ?>
-// Initialiser le widget de notifications
-document.addEventListener('DOMContentLoaded', function() {
-    const notifBtn = document.getElementById('notifBtn');
-    const notifDropdown = document.getElementById('notifDropdown');
-    const notifList = document.getElementById('notifList');
-    const notifBadge = document.getElementById('notifBadge');
-
-    if (!notifBtn) return;
-
-    // Charger les notifications
-    async function loadNotifications() {
-        try {
-            const response = await fetch('<?= APP_URL ?>/api/notifications/widget');
-            const data = await response.json();
-
-            // Mettre à jour le badge
-            if (data.count > 0) {
-                notifBadge.textContent = data.count;
-                notifBadge.style.display = 'flex';
-            } else {
-                notifBadge.style.display = 'none';
-            }
-
-            // Mettre à jour la liste
-            if (data.notifications.length === 0) {
-                notifList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Aucune nouvelle notification</div>';
-            } else {
-                notifList.innerHTML = data.notifications.map(n => `
-                    <div style="padding:12px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='white'">
-                        <div style="display:flex; justify-content:space-between; align-items:start; gap:12px;">
-                            <div style="flex:1;">
-                                <strong style="font-size:0.95rem;">${n.titre}</strong>
-                                <p style="margin:4px 0 0; font-size:0.85rem; color:var(--text-muted);">${n.message || ''}</p>
-                                <p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-muted);">${n.time_ago}</p>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        } catch (error) {
-            console.error('Erreur chargement notifications:', error);
-        }
+$h = static function (string $path): string {
+    $path = '/' . ltrim($path, '/');
+    if ($path === '//') {
+        $path = '/';
     }
 
-    // Charger au démarrage
-    loadNotifications();
+    return htmlspecialchars(rtrim(APP_URL, '/') . $path, ENT_QUOTES, 'UTF-8');
+};
 
-    // Recharger toutes les 30 secondes
-    setInterval(loadNotifications, 30000);
+$sAccueil = ($iPathNorm === '/' || $iPathNorm === '/index.php' || str_ends_with($iPathNorm, '/index.php'));
+$sCreer = str_starts_with($iPathNorm, '/signalement/creer');
+$sListeSignalements = str_starts_with($iPathNorm, '/signalements')
+    || (str_starts_with($iPathNorm, '/signalement/') && !$sCreer);
+$sInterventions = ($iPathNorm === '/interventions');
+$sSuivi = str_starts_with($iPathNorm, '/suivi');
+$sContact = str_starts_with($iPathNorm, '/contact');
+$sNotif = str_starts_with($iPathNorm, '/notifications');
+$sCarte = str_starts_with($iPathNorm, '/carte');
+$sBo = str_starts_with($iPathNorm, '/backoffice');
 
-    // Afficher/masquer le dropdown
-    notifBtn.addEventListener('click', () => {
-        notifDropdown.style.display = notifDropdown.style.display === 'none' ? 'block' : 'none';
-    });
+$flash = $flash ?? null;
 
-    // Fermer en cliquant ailleurs
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#notifBtn') && !e.target.closest('#notifDropdown')) {
-            notifDropdown.style.display = 'none';
-        }
-    });
-});
+$assetBase = rtrim(APP_URL, '/');
+cityzen_render_head($pageTitle, [
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
+    'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@400;600&display=swap',
+    $assetBase . '/public/cityzen_shell.css?v=cz-shell-3',
+    $assetBase . '/public/assets/css/main.css?v=cz-mod-2',
+    $assetBase . '/public/assets/css/copilot.css',
+    $assetBase . '/public/cityzen_body_reset.css?v=1',
+], 'interventions-module-public');
+
+?>
+<div class="site-shell site-shell-interventions">
+<?php
+$cityzen_nav_active = 'interventions_gestion';
+include dirname(__DIR__, 4) . '/events/views/layouts/cityzen_topbar.php';
+?>
+
+<nav class="interventions-subnav cz-interventions-subnav" aria-label="Navigation du module interventions">
+    <a href="<?= $h('/') ?>" class="<?= $sAccueil ? 'actif' : '' ?>">Accueil</a>
+    <a href="<?= $h('/signalements') ?>" class="<?= $sListeSignalements ? 'actif' : '' ?>">Signalements</a>
+    <a href="<?= $h('/interventions') ?>" class="<?= $sInterventions ? 'actif' : '' ?>">Interventions</a>
+    <a href="<?= $h('/suivi') ?>" class="<?= $sSuivi ? 'actif' : '' ?>">Suivi</a>
+    <a href="<?= $h('/carte') ?>" class="<?= $sCarte ? 'actif' : '' ?>">Carte</a>
+    <a href="<?= $h('/contact') ?>" class="<?= $sContact ? 'actif' : '' ?>">Contact</a>
+    <a href="<?= $h('/signalement/creer') ?>" class="<?= $sCreer ? 'actif' : '' ?>">Signaler</a>
+<?php if (isset($_SESSION['user_id'])): ?>
+    <a href="<?= $h('/notifications') ?>" class="<?= $sNotif ? 'actif' : '' ?>">Notifications</a>
 <?php endif; ?>
-</script>
+<?php if (function_exists('cityzen_is_agent') && cityzen_is_agent()): ?>
+    <a href="<?= $h('/backoffice') ?>" class="<?= $sBo ? 'actif' : '' ?>">Administration</a>
+<?php endif; ?>
+</nav>
 
-<!-- ========== BOUTON ADMINISTRATION FLOTTANT (agents CityZen) ========== -->
-<a href="<?= APP_URL ?>/backoffice" id="adminFloatBtn" title="Accès Administration" <?= (function_exists('cityzen_is_agent') && !cityzen_is_agent()) ? 'hidden' : '' ?> style="<?= (function_exists('cityzen_is_agent') && !cityzen_is_agent()) ? 'display:none' : '' ?>">
+<main class="page public-page interventions-module-body cz-interventions-scope" id="mainContent">
+<div class="interventions-module-wrap">
+
+<?php if (is_array($flash) && ($flash['message'] ?? '') !== ''): ?>
+<div class="interv-flash interv-flash--<?= htmlspecialchars((string) ($flash['type'] ?? 'info'), ENT_QUOTES, 'UTF-8') ?>">
+    <?= htmlspecialchars((string) $flash['message'], ENT_QUOTES, 'UTF-8') ?>
+</div>
+<?php endif; ?>
+
+<?= $content ?>
+
+<div class="interventions-module-footer-note" role="note">
+    <p>© <?= (int) date('Y') ?> CityZen — module signalements &amp; interventions</p>
+</div>
+
+</div><!-- .interventions-module-wrap -->
+</main>
+
+</div><!-- .site-shell-interventions -->
+
+<script src="<?= htmlspecialchars($assetBase . '/public/assets/js/main.js?v=cz-mod-2', ENT_QUOTES, 'UTF-8') ?>"></script>
+
+<script>
+    window.COPILOT_APP_URL = <?= json_encode((string) APP_URL, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    window.COPILOT_USER_ROLE = <?= json_encode($_SESSION['user_role'] ?? 'guest', JSON_UNESCAPED_UNICODE) ?>;
+    window.COPILOT_USER_NAME = <?= json_encode($_SESSION['user_prenom'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
+</script>
+<script src="<?= htmlspecialchars($assetBase . '/public/assets/js/copilot-kb.js', ENT_QUOTES, 'UTF-8') ?>"></script>
+<script src="<?= htmlspecialchars($assetBase . '/public/assets/js/copilot.js', ENT_QUOTES, 'UTF-8') ?>"></script>
+
+<a href="<?= $h('/backoffice') ?>" id="adminFloatBtn" title="Accès administration" <?= (function_exists('cityzen_is_agent') && !cityzen_is_agent()) ? 'hidden' : '' ?>>
     <i class="fas fa-cog"></i>
     <span>Administration</span>
 </a>
 
 <style>
-    #adminFloatBtn {
-        position: fixed;
-        bottom: 28px;
-        right: 28px;
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 11px 18px;
-        background: linear-gradient(135deg, #6c63ff, #4ecdc4);
-        color: #fff;
-        text-decoration: none;
-        border-radius: 50px;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: 'Inter', 'Montserrat', sans-serif;
-        box-shadow: 0 4px 20px rgba(108, 99, 255, 0.4);
-        transition: all 0.3s ease;
-        letter-spacing: 0.3px;
-    }
-    #adminFloatBtn:hover {
-        transform: translateY(-3px) scale(1.04);
-        box-shadow: 0 8px 28px rgba(108, 99, 255, 0.55);
-        background: linear-gradient(135deg, #5a52d5, #3dbdb5);
-    }
-    #adminFloatBtn:active { transform: translateY(0) scale(0.98); }
-    #adminFloatBtn i {
-        font-size: 15px;
-        animation: spin-slow 4s linear infinite;
-    }
-    @keyframes spin-slow {
-        from { transform: rotate(0deg); }
-        to   { transform: rotate(360deg); }
-    }
-    @media (max-width: 600px) {
-        #adminFloatBtn span { display: none; }
-        #adminFloatBtn { padding: 13px; border-radius: 50%; }
-    }
+#adminFloatBtn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  background: linear-gradient(135deg, #6c63ff, #4ecdc4);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(108, 99, 255, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#adminFloatBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(108, 99, 255, 0.5); }
+@media (max-width: 600px) {
+  #adminFloatBtn span { display: none; }
+  #adminFloatBtn { padding: 13px; border-radius: 50%; }
+}
 </style>
 
-<!-- ========== COPILOT ZENO ========== -->
-<script>
-    window.COPILOT_APP_URL = '<?= APP_URL ?>';
-    window.COPILOT_USER_ROLE = '<?= $_SESSION['user_role'] ?? 'guest' ?>';
-    window.COPILOT_USER_NAME = '<?= htmlspecialchars($_SESSION['user_prenom'] ?? '') ?>';
-</script>
-<script src="<?= APP_URL ?>/public/assets/js/copilot-kb.js"></script>
-<script src="<?= APP_URL ?>/public/assets/js/copilot.js"></script>
-
-</body>
-</html>
+<?php cityzen_render_footer(); ?>
