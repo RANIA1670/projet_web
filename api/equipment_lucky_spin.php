@@ -31,7 +31,7 @@ if ($method === 'POST') {
         'ok' => true,
         'can_spin' => false,
         'already_spun' => (bool) ($result['already_spun'] ?? false),
-        'outcome' => (string) ($result['outcome'] ?? 'no_win'),
+        'outcome' => (string) ($result['outcome'] ?? 'discount'),
         'code' => (string) ($result['code'] ?? ''),
         'discount_percent' => (int) ($result['discount_percent'] ?? 0),
         'valid_until' => (string) ($result['valid_until'] ?? ''),

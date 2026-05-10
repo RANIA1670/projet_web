@@ -47,34 +47,27 @@ class LuckySpin
             ];
         }
 
-        $roll = random_int(1, 100);
-        $win = $roll <= 80; // 80% chance de gagner une remise
-        $percent = 0;
-        if ($win) {
-            $percent = $this->drawDiscountPercent();
-        }
+        $percent = $this->drawDiscountPercent();
 
         $this->pdo->beginTransaction();
         try {
             $codeId = null;
             $code = '';
             $validUntil = '';
-            if ($win) {
-                $code = $this->generateCode();
-                $validUntil = gmdate('Y-m-d H:i:s', time() + 14 * 86400);
-                $insCode = $this->pdo->prepare(
-                    "INSERT INTO equipment_discount_code
-                     (code, user_id, discount_percent, status, generated_from, valid_from, valid_until)
-                     VALUES (:c, :u, :p, 'active', 'lucky_spin', UTC_TIMESTAMP(), :vu)"
-                );
-                $insCode->execute([
-                    ':c' => $code,
-                    ':u' => $userId,
-                    ':p' => $percent,
-                    ':vu' => $validUntil,
-                ]);
-                $codeId = (int) $this->pdo->lastInsertId();
-            }
+            $code = $this->generateCode();
+            $validUntil = gmdate('Y-m-d H:i:s', time() + 14 * 86400);
+            $insCode = $this->pdo->prepare(
+                "INSERT INTO equipment_discount_code
+                 (code, user_id, discount_percent, status, generated_from, valid_from, valid_until)
+                 VALUES (:c, :u, :p, 'active', 'lucky_spin', UTC_TIMESTAMP(), :vu)"
+            );
+            $insCode->execute([
+                ':c' => $code,
+                ':u' => $userId,
+                ':p' => $percent,
+                ':vu' => $validUntil,
+            ]);
+            $codeId = (int) $this->pdo->lastInsertId();
 
             $insSpin = $this->pdo->prepare(
                 "INSERT INTO equipment_lucky_spin (user_id, spin_date, outcome, discount_code_id)
@@ -82,14 +75,14 @@ class LuckySpin
             );
             $insSpin->execute([
                 ':u' => $userId,
-                ':o' => $win ? 'discount' : 'no_win',
+                ':o' => 'discount',
                 ':cid' => $codeId,
             ]);
             $this->pdo->commit();
 
             return [
                 'already_spun' => false,
-                'outcome' => $win ? 'discount' : 'no_win',
+                'outcome' => 'discount',
                 'code' => $code,
                 'discount_percent' => $percent,
                 'valid_until' => $validUntil,

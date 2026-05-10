@@ -118,52 +118,52 @@ function bo_handle_post(PDO $pdo): bool
             $id = (int) ($_POST['reservation_id'] ?? 0);
             $notify = !empty($_POST['send_notification']);
             if ($id <= 0) {
-                $redirect('reservations', 'Action invalide.', 'error');
+                $redirect('equipment', 'Action invalide.', 'error');
             }
             $row = $reservations->find($id);
             if ($row === null || ($row['status'] ?? '') !== 'pending') {
-                $redirect('reservations', 'Demande introuvable ou déjà traitée.', 'error');
+                $redirect('equipment', 'Demande introuvable ou déjà traitée.', 'error');
             }
             $eqId = (int) $row['equipment_id'];
             $eq = $equipment->find($eqId);
             if ($eq === null || ($eq['status'] ?? '') !== 'available') {
-                $redirect('reservations', 'Équipement non disponible.', 'error', ['tab' => 'pending']);
+                $redirect('equipment', 'Équipement non disponible.', 'error');
             }
             if ($reservations->hasOverlap($eqId, (string) $row['start_date'], (string) $row['end_date'], $id)) {
-                $redirect('reservations', 'Conflit de dates sur cet équipement.', 'error', ['tab' => 'pending']);
+                $redirect('equipment', 'Conflit de dates sur cet équipement.', 'error');
             }
             if ($reservations->approve($id, $notify)) {
                 $msg = $notify
                     ? 'Approuvé — notification e-mail simulée (aucun envoi SMTP configuré).'
                     : 'Réservation approuvée.';
-                $redirect('reservations', $msg, 'success', ['tab' => 'pending']);
+                $redirect('equipment', $msg);
             }
-            $redirect('reservations', 'Échec approbation.', 'error', ['tab' => 'pending']);
+            $redirect('equipment', 'Échec approbation.', 'error');
 
         case 'reservation_reject':
             $id = (int) ($_POST['reservation_id'] ?? 0);
             $reason = trim((string) ($_POST['rejection_reason'] ?? ''));
             if ($id <= 0 || $reason === '') {
-                $redirect('reservations', 'Le motif de refus est obligatoire.', 'error', ['tab' => 'pending']);
+                $redirect('equipment', 'Le motif de refus est obligatoire.', 'error');
             }
             if ($reservations->reject($id, $reason)) {
-                $redirect('reservations', 'Demande refusée.', 'success', ['tab' => 'pending']);
+                $redirect('equipment', 'Demande refusée.');
             }
-            $redirect('reservations', 'Refus impossible.', 'error', ['tab' => 'pending']);
+            $redirect('equipment', 'Refus impossible.', 'error');
 
         case 'reservation_return':
             $id = (int) ($_POST['reservation_id'] ?? 0);
             if ($id > 0 && $reservations->markReturned($id)) {
-                $redirect('reservations', 'Retour enregistré — équipement disponible.', 'success', ['tab' => 'history']);
+                $redirect('equipment', 'Retour enregistré — équipement disponible.');
             }
-            $redirect('reservations', 'Action impossible (réservation non active).', 'error', ['tab' => 'history']);
+            $redirect('equipment', 'Action impossible (réservation non active).', 'error');
 
         case 'reservation_noshow':
             $id = (int) ($_POST['reservation_id'] ?? 0);
             if ($id > 0 && $reservations->markNoShow($id)) {
-                $redirect('reservations', 'Marqué comme no-show — équipement disponible.', 'success', ['tab' => 'history']);
+                $redirect('equipment', 'Marqué comme no-show — équipement disponible.');
             }
-            $redirect('reservations', 'Action impossible.', 'error', ['tab' => 'history']);
+            $redirect('equipment', 'Action impossible.', 'error');
 
         default:
             return false;

@@ -661,6 +661,70 @@ button, input, select, textarea { font: inherit; }
 .bo-filter-grid select, .bo-filter-grid input { min-width: 140px; }
 
 .bo-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.bo-table.bo-equipment-table .bo-eq-main-row td {
+  background: #ffffff !important;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(36, 59, 83, .08);
+}
+.bo-table.bo-equipment-table .bo-eq-main-row td:nth-child(2) {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.bo-table.bo-equipment-table .bo-eq-main-row td:nth-child(3),
+.bo-table.bo-equipment-table .bo-eq-main-row td:nth-child(4) {
+  font-size: .92rem;
+  font-weight: 700;
+}
+.bo-table.bo-equipment-table .bo-eq-main-row .bo-badge {
+  font-size: .76rem;
+}
+.bo-eq-reservation-row td {
+  background: #f1f5fb !important;
+  padding-top: 0;
+}
+.bo-eq-reservation-box {
+  border: 1px solid rgba(26, 115, 232, .12);
+  border-left: 4px solid rgba(26, 115, 232, .36);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin: 4px 0 10px 26px;
+  background: #f8fbff;
+}
+.bo-eq-reservation-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.bo-eq-reservation-count {
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+.bo-table--nested th,
+.bo-table--nested td {
+  font-size: .78rem;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.bo-table--nested th {
+  opacity: .8;
+}
+.bo-table--nested .btn-bo {
+  font-size: .72rem;
+  padding: 5px 10px;
+}
+.bo-table--nested .bo-inline-check {
+  font-size: .7rem;
+}
+.bo-rejection-note {
+  margin-top: 4px;
+  font-size: .72rem;
+  color: var(--red);
+}
 
 .bo-modal {
   position: fixed;

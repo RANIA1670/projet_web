@@ -1,0 +1,638 @@
+/* ================================================
+   Module événements (Ibrahim) — CSS strictement encapsulé
+   - sous-barre : `.site-shell-events nav.cz-events-subnav`
+   - contenu formulaires / hero / admin module : `.cz-events-scope` (sur `<main>`)
+   Aucun sélecteur global (.sidebar seul, .hero seul, .btn seul…) : sinon la barre CityZen peut être affectée.
+   ================================================ */
+
+/* Coque page événements (front) */
+.site-shell-events {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.site-shell-events .events-module-body {
+  flex: 1;
+}
+
+/* Sous-navigation du module uniquement — ne cible PAS nav.main-nav */
+.site-shell-events nav.cz-events-subnav {
+  position: relative;
+  width: min(96%, 1120px);
+  margin: -2px auto 0;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  background: #2c3e50;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  min-height: 52px;
+}
+.site-shell-events nav.cz-events-subnav a {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.86rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.site-shell-events nav.cz-events-subnav a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.site-shell-events nav.cz-events-subnav a.actif {
+  color: #27ae60;
+}
+
+/* Coque back-office : flex + liens (aucun sélecteur global nu) */
+.site-shell-events-bo {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.site-shell-events-bo .events-bo-stage {
+  flex: 1;
+}
+.site-shell-events-bo .cz-events-scope .events-bo-toplinks {
+  padding: 0 clamp(14px, 3vw, 22px) 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.88rem;
+  max-width: min(96%, 1120px);
+  margin: 0 auto;
+  width: 100%;
+}
+.site-shell-events-bo .cz-events-scope .events-bo-toplinks a {
+  color: var(--blue, #1a73e8);
+  text-decoration: none;
+}
+.site-shell-events-bo .cz-events-scope .events-bo-toplinks a:hover {
+  text-decoration: underline;
+}
+
+/*
+ * BO : <main> a la classe globale `.page` (CityZen) qui impose width: min(96%, 1120px).
+ * Avec sidebar + zone principale, tout déborde à droite et overflow:hidden sur .admin-layout rogne.
+ */
+.site-shell-events-bo main.events-bo-stage.page {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+  padding: 12px 0 28px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.site-shell-events-bo .cz-events-scope form.search-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.site-shell-events-bo .cz-events-scope form.search-form > div:last-child {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ----- Tout le reste du module : uniquement sous <main class="cz-events-scope"> ----- */
+.cz-events-scope {
+  font-family: 'Montserrat', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2c3e50;
+}
+
+.cz-events-scope .events-module-wrap.events-front .container {
+  margin-top: 0;
+}
+
+.cz-events-scope .container {
+  max-width: 1060px;
+  margin: 32px auto;
+  padding: 0 22px;
+}
+
+.cz-events-scope h1 {
+  font-size: 1.55rem;
+  font-weight: 900;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #27ae60;
+}
+.cz-events-scope h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+.cz-events-scope .hero h1 {
+  color: #fff;
+  border: none;
+  font-size: 2rem;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.cz-events-scope .hero h1 span {
+  color: #27ae60;
+}
+
+.cz-events-scope .cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+}
+.cz-events-scope .card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 22px;
+  width: 300px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.cz-events-scope .card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.cz-events-scope .card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.cz-events-scope .card p {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+.cz-events-scope .card .date {
+  color: #27ae60;
+  font-weight: 700;
+}
+.cz-events-scope .card .lieu {
+  color: #e67e22;
+}
+.cz-events-scope .sponsor-badge {
+  display: inline-block;
+  background: #eaf4fb;
+  color: #2980b9;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cz-events-scope .btn {
+  display: inline-block;
+  padding: 9px 20px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+.cz-events-scope .btn-vert {
+  background: #27ae60;
+  color: #fff;
+}
+.cz-events-scope .btn-vert:hover {
+  background: #1e8449;
+}
+.cz-events-scope .btn-bleu {
+  background: #2c3e50;
+  color: #fff;
+}
+.cz-events-scope .btn-bleu:hover {
+  background: #1a252f;
+}
+.cz-events-scope .btn-orange {
+  background: #e67e22;
+  color: #fff;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+}
+.cz-events-scope .btn-orange:hover {
+  background: #ca6f1e;
+}
+.cz-events-scope .btn-rouge {
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+}
+.cz-events-scope .btn-rouge:hover {
+  background: #c0392b;
+}
+.cz-events-scope .btn-gris {
+  background: #95a5a6;
+  color: #fff;
+}
+.cz-events-scope .btn-gris:hover {
+  background: #7f8c8d;
+}
+
+.cz-events-scope .search-form input,
+.cz-events-scope .search-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+.cz-events-scope .search-form input:focus,
+.cz-events-scope .search-form select:focus {
+  border-color: #27ae60;
+  outline: none;
+}
+
+.cz-events-scope .circle-grid {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  justify-content: center;
+}
+.cz-events-scope .circle-grid.single {
+  justify-content: center;
+}
+.cz-events-scope .circle-card {
+  background: #fff;
+  border-radius: 50%;
+  width: 170px;
+  height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+.cz-events-scope .circle-card.orange {
+  background: #fef5e7;
+}
+.cz-events-scope .circle-card.bleu {
+  background: #ebf2f8;
+}
+.cz-events-scope .circle-num {
+  font-size: 2.35rem;
+  font-weight: 900;
+  color: #27ae60;
+}
+.cz-events-scope .circle-card.orange .circle-num {
+  color: #e67e22;
+}
+.cz-events-scope .circle-card.bleu .circle-num {
+  color: #2c3e50;
+}
+.cz-events-scope .circle-pct {
+  margin-top: 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #2c3e50;
+}
+.cz-events-scope .circle-lbl {
+  font-size: 0.88rem;
+  color: #546e7a;
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.cz-events-scope .form-box {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 28px;
+  max-width: 560px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+}
+.cz-events-scope .form-box label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+.cz-events-scope .form-box input,
+.cz-events-scope .form-box textarea,
+.cz-events-scope .form-box select {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1.5px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.cz-events-scope .form-box input:focus,
+.cz-events-scope .form-box textarea:focus,
+.cz-events-scope .form-box select:focus {
+  outline: none;
+  border-color: #27ae60;
+}
+.cz-events-scope .form-box textarea {
+  height: 95px;
+  resize: vertical;
+}
+.cz-events-scope .form-row {
+  display: flex;
+  gap: 12px;
+}
+.cz-events-scope .form-row > div {
+  flex: 1;
+}
+
+.cz-events-scope .msg-succes {
+  background: #d5f5e3;
+  color: #1e8449;
+  border: 1px solid #27ae60;
+  padding: 11px 16px;
+  border-radius: 6px;
+  margin-bottom: 18px;
+  font-size: 0.9rem;
+}
+.cz-events-scope .msg-erreur {
+  background: #fde8e8;
+  color: #c0392b;
+  border: 1px solid #e74c3c;
+  padding: 11px 16px;
+  border-radius: 6px;
+  margin-bottom: 18px;
+  font-size: 0.9rem;
+}
+.cz-events-scope .msg-erreur ul {
+  margin: 6px 0 0 18px;
+}
+.cz-events-scope .msg-erreur ul li {
+  margin-bottom: 3px;
+}
+
+.cz-events-scope table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+}
+.cz-events-scope thead {
+  background: #2c3e50;
+  color: #fff;
+}
+.cz-events-scope thead th {
+  padding: 13px 15px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.cz-events-scope tbody tr {
+  border-bottom: 1px solid #eee;
+  transition: background 0.15s;
+}
+.cz-events-scope tbody tr:hover {
+  background: #f0faf4;
+}
+.cz-events-scope tbody tr:last-child {
+  border-bottom: none;
+}
+.cz-events-scope tbody td {
+  padding: 11px 15px;
+  font-size: 0.88rem;
+}
+.cz-events-scope .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cz-events-scope .badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.cz-events-scope .badge-vert {
+  background: #d5f5e3;
+  color: #1e8449;
+}
+.cz-events-scope .badge-orange {
+  background: #fef5e7;
+  color: #ca6f1e;
+}
+.cz-events-scope .badge-bleu {
+  background: #eaf4fb;
+  color: #2980b9;
+}
+
+.site-shell-events-bo .cz-events-scope .admin-layout {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: min(96%, 1200px);
+  min-height: calc(100vh - 120px);
+  margin: 0 auto 32px;
+  padding: 0 clamp(10px, 2vw, 18px);
+  border-radius: 12px;
+  overflow-x: auto;
+  overflow-y: visible;
+  box-shadow: var(--shadow, 0 2px 10px rgba(0, 0, 0, 0.07));
+  box-sizing: border-box;
+}
+.site-shell-events-bo .cz-events-scope .main-admin {
+  min-width: 0;
+  flex: 1 1 0%;
+}
+.site-shell-events-bo .cz-events-scope .main-admin table {
+  width: 100%;
+  max-width: 100%;
+}
+.cz-events-scope .sidebar {
+  width: 210px;
+  background: #2c3e50;
+  padding: 16px 0;
+  flex-shrink: 0;
+}
+.cz-events-scope .sidebar-title {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 14px 20px 5px;
+}
+.cz-events-scope .sidebar a {
+  display: block;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+}
+.cz-events-scope .sidebar a:hover,
+.cz-events-scope .sidebar a.actif {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border-left-color: #27ae60;
+}
+.cz-events-scope .main-admin {
+  flex: 1;
+  padding: 28px clamp(16px, 3vw, 32px) 48px;
+}
+
+.cz-events-scope .back-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.cz-events-scope .back-link {
+  display: inline-block;
+  color: #2c3e50;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+.cz-events-scope .back-link:hover {
+  color: #27ae60;
+}
+
+.cz-events-scope .kpi-grid {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+.cz-events-scope .kpi-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  min-width: 170px;
+  flex: 1;
+  border-bottom: 4px solid #27ae60;
+}
+.cz-events-scope .kpi-card.orange {
+  border-bottom-color: #e67e22;
+}
+.cz-events-scope .kpi-card.bleu {
+  border-bottom-color: #2c3e50;
+}
+.cz-events-scope .kpi-num {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #27ae60;
+  line-height: 1;
+}
+.cz-events-scope .kpi-card.orange .kpi-num {
+  color: #e67e22;
+}
+.cz-events-scope .kpi-card.bleu .kpi-num {
+  color: #2c3e50;
+}
+.cz-events-scope .kpi-lbl {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.cz-events-scope .detail-box {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 26px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+}
+.cz-events-scope .detail-box p {
+  margin-bottom: 10px;
+  font-size: 0.92rem;
+}
+.cz-events-scope .detail-label {
+  font-weight: 700;
+  color: #2c3e50;
+  display: inline-block;
+  min-width: 120px;
+}
+.cz-events-scope .participants-list {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 22px;
+}
+.cz-events-scope .participants-list ul {
+  list-style: none;
+  padding: 0;
+}
+.cz-events-scope .participants-list ul li {
+  padding: 7px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.88rem;
+}
+.cz-events-scope .participants-list ul li:last-child {
+  border-bottom: none;
+}
+
+.cz-events-scope .hero {
+  background: linear-gradient(135deg, #2c3e50 0%, #3d5166 100%);
+  padding: 48px 24px;
+  text-align: center;
+  color: #fff;
+}
+.cz-events-scope .hero p {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1rem;
+  margin: 10px auto 24px;
+  max-width: 520px;
+}
+.cz-events-scope .hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 20px;
+}
+.cz-events-scope .hstat-num {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #27ae60;
+  display: block;
+}
+.cz-events-scope .hstat-lbl {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+}
+
+.cz-events-scope footer.mod-footer {
+  text-align: center;
+  padding: 26px;
+  color: #aaa;
+  font-size: 0.8rem;
+  margin-top: 40px;
+  border-top: 1px solid #e9ecef;
+}
+.cz-events-scope footer.mod-footer span {
+  color: #27ae60;
+  font-weight: 600;
+}

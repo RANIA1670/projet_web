@@ -10,12 +10,15 @@ class EquipmentManageController
     private $equipment;
     /** @var TypeEquipment */
     private $types;
+    /** @var Reservation */
+    private $reservations;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
         $this->equipment = new Equipment($pdo);
         $this->types = new TypeEquipment($pdo);
+        $this->reservations = new Reservation($pdo);
     }
 
     public function index(string $message = '', string $messageType = ''): void
@@ -28,6 +31,8 @@ class EquipmentManageController
 
         $rows = $this->equipment->allWithType($typeId, $status, $location);
         $typeList = $this->types->all();
+        $equipmentIds = array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $rows);
+        $reservationsByEquipment = $this->reservations->groupedByEquipment($equipmentIds);
 
         ob_start();
         require VIEW_PATH . '/equipment/manage.php';

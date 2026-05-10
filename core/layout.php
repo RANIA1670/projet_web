@@ -7,7 +7,9 @@ function cityzen_base_path(): string
     $script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     $lastSegment = basename($script);
 
-    if (in_array($lastSegment, ['admin', 'api', 'includes', 'controller', 'equipment', 'forum'], true)) {
+    // Scripts under these folders live one level below site root; assets/ is at project root
+    // (omit the folder from the URL prefix so cityzen_asset('assets/css/style.css') resolves).
+    if (in_array($lastSegment, ['admin', 'api', 'includes', 'controller', 'equipment', 'forum', 'events'], true)) {
         $script = dirname($script);
     }
 
@@ -50,18 +52,11 @@ function cityzen_request_origin(): string
         }
     }
 
-    $hostNoPort = strtolower((string) preg_replace('~:\d+$~', '', $host));
-    if (in_array($hostNoPort, ['localhost', '127.0.0.1', '::1'], true)) {
-        $ip = trim((string) ($_SERVER['SERVER_ADDR'] ?? ''));
-        if ($ip === '' || $ip === '127.0.0.1' || $ip === '::1') {
-            $ip = gethostbyname(gethostname());
-        }
-        if (is_string($ip) && $ip !== '' && $ip !== '127.0.0.1') {
-            $port = (int) ($_SERVER['SERVER_PORT'] ?? ($https ? 443 : 80));
-            $isDefaultPort = ($https && $port === 443) || (!$https && $port === 80);
-            $host = $ip . ($isDefaultPort ? '' : ':' . $port);
-        }
-    }
+    // Keep the same host as the page (HTTP_HOST): do not rewrite localhost → LAN IP.
+    // Otherwise absolute URLs used for inscription QR (« Ouvrir le lien QR ») open on a
+    // different host, PHP uses a separate session cookie, and ?qr= no longer matches the
+    // token stored during register.php loading. Pour un lien scannable depuis un téléphone,
+    // définir CITYZEN_PUBLIC_ORIGIN dans storage/local.env (ex. http://192.168.1.X/projet_web).
 
     return $scheme . '://' . $host;
 }

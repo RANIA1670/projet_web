@@ -326,11 +326,7 @@ require dirname(__DIR__, 3) . '/includes/shell_start.php';
         }
         launchConfetti();
       } else {
-        spinState.textContent = 'Tirage déjà utilisé aujourd\'hui (pas de remise).';
-        if (spinBox) {
-          spinBox.classList.add('is-lose');
-          spinBox.classList.remove('is-win');
-        }
+        spinState.textContent = 'Tirage déjà utilisé aujourd\'hui.';
       }
     }
 
@@ -358,12 +354,6 @@ require dirname(__DIR__, 3) . '/includes/shell_start.php';
           .then(function (r) { return r.json(); })
           .then(function (data) {
             renderSpinState(data);
-            if (spinResult && data && data.outcome === 'no_win') {
-              spinResult.innerHTML = '<p class="eq-alert">Pas de remise cette fois-ci. Revenez demain.</p>';
-              spinResult.classList.remove('spin-reveal');
-              void spinResult.offsetWidth;
-              spinResult.classList.add('spin-reveal');
-            }
           })
           .catch(function () {
             if (spinResult) spinResult.innerHTML = '<p class="eq-alert eq-alert--err">Erreur Lucky spin.</p>';

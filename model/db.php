@@ -195,6 +195,90 @@ function cityzen_db_ensure_schema(PDO $pdo): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
     }
+
+    // ─── Module événements (schéma branche ibrahim : tables `sponsor`, `event`, `participation`, `avis`) ───
+    if (!cityzen_db_table_exists($pdo, 'sponsor')) {
+        $pdo->exec(
+            'CREATE TABLE sponsor (
+                id_sponsor INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                nom VARCHAR(150) NOT NULL,
+                email VARCHAR(190) NOT NULL,
+                telephone VARCHAR(50) NOT NULL DEFAULT \'\',
+                KEY idx_sponsor_nom (nom)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'event')) {
+        $pdo->exec(
+            'CREATE TABLE `event` (
+                id_event INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                titre VARCHAR(200) NOT NULL,
+                description TEXT NULL,
+                date_event DATE NOT NULL,
+                lieu VARCHAR(255) NOT NULL,
+                id_sponsor INT UNSIGNED NOT NULL,
+                KEY idx_event_date (date_event),
+                KEY idx_event_sponsor (id_sponsor),
+                CONSTRAINT fk_cz_ev_event_sponsor
+                    FOREIGN KEY (id_sponsor) REFERENCES sponsor (id_sponsor)
+                    ON DELETE RESTRICT ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'participation')) {
+        $pdo->exec(
+            'CREATE TABLE participation (
+                id_participation INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                nom_participant VARCHAR(120) NOT NULL,
+                email_participant VARCHAR(190) NOT NULL,
+                numero_participant VARCHAR(40) NOT NULL DEFAULT \'\',
+                age_participant INT UNSIGNED NOT NULL DEFAULT 0,
+                sexe_participant VARCHAR(20) NOT NULL DEFAULT \'\',
+                id_event INT UNSIGNED NOT NULL,
+                KEY idx_participation_event (id_event),
+                KEY idx_participation_email (email_participant),
+                CONSTRAINT fk_cz_ev_participation_event
+                    FOREIGN KEY (id_event) REFERENCES `event` (id_event)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'avis')) {
+        $pdo->exec(
+            'CREATE TABLE avis (
+                id_avis INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                id_event INT UNSIGNED NOT NULL,
+                id_participation INT UNSIGNED NOT NULL,
+                note TINYINT UNSIGNED NOT NULL DEFAULT 5,
+                commentaire TEXT NULL,
+                date_avis DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                approuve TINYINT(1) NOT NULL DEFAULT 0,
+                UNIQUE KEY uq_avis_event_participation (id_event, id_participation),
+                CONSTRAINT fk_cz_ev_avis_event
+                    FOREIGN KEY (id_event) REFERENCES `event` (id_event)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_cz_ev_avis_participation
+                    FOREIGN KEY (id_participation) REFERENCES participation (id_participation)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    if (
+        cityzen_db_table_exists($pdo, 'sponsor')
+        && (int) $pdo->query('SELECT COUNT(*) FROM sponsor')->fetchColumn() === 0
+    ) {
+        try {
+            $pdo->exec(
+                "INSERT INTO sponsor (nom, email, telephone) VALUES ('Sponsor démo', 'sponsor-demo@cityzen.local', '')"
+            );
+        } catch (PDOException) {
+            /* ignore si concurrence ou droits */
+        }
+    }
 }
 
 function cityzen_db_seed_if_empty(PDO $pdo): void

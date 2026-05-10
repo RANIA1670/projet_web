@@ -33,7 +33,7 @@ try {
             (new TypesManageController($pdo))->index();
             break;
         case 'reservations':
-            (new ReservationManageController($pdo))->index();
+            (new EquipmentManageController($pdo))->index();
             break;
         case 'reports':
             (new ReportController($pdo))->index();

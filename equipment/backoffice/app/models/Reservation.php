@@ -72,6 +72,39 @@ class Reservation
     }
 
     /**
+     * @param array<int, int> $equipmentIds
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    public function groupedByEquipment(array $equipmentIds): array
+    {
+        if ($equipmentIds === []) {
+            return [];
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $equipmentIds)));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT r.id, r.equipment_id, r.start_date, r.end_date, r.status, r.purpose, r.rejection_reason,
+                       r.price_total, u.username AS user_name
+                FROM reservation r
+                LEFT JOIN users u ON u.id = r.user_id
+                WHERE r.equipment_id IN ($placeholders)
+                ORDER BY r.equipment_id ASC, r.start_date DESC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($ids);
+
+        $grouped = [];
+        while ($row = $stmt->fetch()) {
+            $eqId = (int) ($row['equipment_id'] ?? 0);
+            if (!isset($grouped[$eqId])) {
+                $grouped[$eqId] = [];
+            }
+            $grouped[$eqId][] = $row;
+        }
+
+        return $grouped;
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function forMonthExport(int $year, int $month): array

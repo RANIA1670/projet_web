@@ -122,7 +122,7 @@ $cityzen = [
         ['key' => 'dashboard', 'label' => 'Tableau de bord', 'url' => '/controller/dashboard.php'],
         ['key' => 'equipment-bo', 'label' => 'Équipement (BO)', 'url' => '/admin/equipment.php'],
         ['key' => 'eq-tickets', 'label' => 'Tickets équipement', 'url' => '/admin/equipment_tickets.php'],
-        ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
+        ['key' => 'events_gestion', 'label' => 'gestion evenement', 'url' => '/events/index.php?page=back_dashboard'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'air', 'label' => 'Qualite air', 'url' => '#qualite-air'],
         ['key' => 'transport', 'label' => 'Transports', 'url' => '#transports'],
@@ -134,7 +134,7 @@ $cityzen = [
     ],
     'public_menu' => [
         ['key' => 'home', 'label' => 'Accueil', 'url' => '/index.php'],
-        ['key' => 'reports', 'label' => 'Signalements', 'url' => '#signalements'],
+        ['key' => 'events_gestion', 'label' => 'gestion evenement', 'url' => '/events/index.php'],
         ['key' => 'projects', 'label' => 'Projets', 'url' => '#projets'],
         ['key' => 'open-data', 'label' => 'Open Data', 'url' => '#open-data'],
         ['key' => 'portail', 'label' => 'Portail municipal', 'url' => '/controller/index.php'],

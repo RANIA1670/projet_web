@@ -1,6 +1,7 @@
 <?php
 /** @var array $rows */
 /** @var array $typeList */
+/** @var array<int, array<int, array<string, mixed>>> $reservationsByEquipment */
 ?>
 <header class="topbar topbar-bo bo-module-header">
   <div class="bo-topbar-titles">
@@ -46,15 +47,18 @@
 
   <div class="card">
     <div class="bo-table-wrap">
-      <table class="transport-table bo-table">
+      <table class="transport-table bo-table bo-equipment-table">
         <thead>
-          <tr>
+          <tr class="bo-eq-main-row">
             <th><input type="checkbox" id="check-all" title="Tout"></th>
             <th>Nom</th><th>Type</th><th>Prix / jour</th><th>Lieu</th><th>Statut</th><th>Dernière m.</th><th>GPS</th><th></th>
           </tr>
         </thead>
         <tbody>
         <?php foreach ($rows as $eq): ?>
+          <?php
+          $eqReservations = $reservationsByEquipment[(int) $eq['id']] ?? [];
+          ?>
           <tr>
             <td><input type="checkbox" name="equipment_ids[]" value="<?= (int) $eq['id'] ?>"></td>
             <td><?= htmlspecialchars((string) $eq['name'], ENT_QUOTES, 'UTF-8') ?></td>
@@ -75,6 +79,92 @@
               'latitude' => $eq['latitude'],
               'longitude' => $eq['longitude'],
             ], JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8') ?>">Modifier</button></td>
+          </tr>
+          <tr class="bo-eq-reservation-row">
+            <td colspan="9">
+              <div class="bo-eq-reservation-box">
+                <div class="bo-eq-reservation-head">
+                  <strong>Réservations liées à cet équipement</strong>
+                  <span class="bo-eq-reservation-count"><?= count($eqReservations) ?> total</span>
+                </div>
+                <?php if ($eqReservations === []): ?>
+                  <p class="muted-note">Aucune réservation pour cet équipement.</p>
+                <?php else: ?>
+                  <div class="bo-table-wrap">
+                    <table class="transport-table bo-table bo-table--nested">
+                      <thead>
+                        <tr>
+                          <th>Utilisateur</th>
+                          <th>Période</th>
+                          <th>Objet</th>
+                          <th>Montant</th>
+                          <th>Statut</th>
+                          <th class="bo-th-actions">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      <?php foreach ($eqReservations as $r): ?>
+                        <?php
+                        $status = (string) ($r['status'] ?? '');
+                        $badgeClass = 'bo-badge bo-badge--muted';
+                        if ($status === 'pending') {
+                            $badgeClass = 'bo-badge bo-badge--pending';
+                        } elseif ($status === 'approved' || $status === 'returned') {
+                            $badgeClass = 'bo-badge bo-badge--ok';
+                        } elseif ($status === 'rejected' || $status === 'no_show' || $status === 'cancelled') {
+                            $badgeClass = 'bo-badge bo-badge--no';
+                        }
+                        ?>
+                        <tr>
+                          <td><?= htmlspecialchars((string) ($r['user_name'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></td>
+                          <td>
+                            <?= htmlspecialchars((string) ($r['start_date'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                            →
+                            <?= htmlspecialchars((string) ($r['end_date'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                          </td>
+                          <td class="bo-td-notes"><?= htmlspecialchars((string) ($r['purpose'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                          <td><?= number_format((float) ($r['price_total'] ?? 0), 2, ',', ' ') ?> TND</td>
+                          <td>
+                            <span class="<?= $badgeClass ?>"><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php if (!empty($r['rejection_reason'])): ?>
+                              <div class="bo-rejection-note"><?= htmlspecialchars((string) $r['rejection_reason'], ENT_QUOTES, 'UTF-8') ?></div>
+                            <?php endif; ?>
+                          </td>
+                          <td class="bo-td-actions">
+                            <?php if ($status === 'pending'): ?>
+                              <form method="post" action="<?= htmlspecialchars(bo_url('equipment'), ENT_QUOTES, 'UTF-8') ?>" class="bo-inline-form">
+                                <input type="hidden" name="route" value="equipment">
+                                <input type="hidden" name="_action" value="reservation_approve">
+                                <input type="hidden" name="reservation_id" value="<?= (int) $r['id'] ?>">
+                                <label class="bo-inline-check"><input type="checkbox" name="send_notification" value="1"> E-mail</label>
+                                <button type="submit" class="btn-bo btn-bo--accept">Approuver</button>
+                              </form>
+                              <button type="button" class="btn-bo btn-bo--decline btn-open-reject" data-id="<?= (int) $r['id'] ?>">Refuser</button>
+                            <?php elseif ($status === 'approved'): ?>
+                              <form method="post" action="<?= htmlspecialchars(bo_url('equipment'), ENT_QUOTES, 'UTF-8') ?>" class="bo-inline-form" onsubmit="return confirm('Confirmer le retour du matériel ?');">
+                                <input type="hidden" name="route" value="equipment">
+                                <input type="hidden" name="_action" value="reservation_return">
+                                <input type="hidden" name="reservation_id" value="<?= (int) $r['id'] ?>">
+                                <button type="submit" class="btn-bo btn-bo--accept">Retour reçu</button>
+                              </form>
+                              <form method="post" action="<?= htmlspecialchars(bo_url('equipment'), ENT_QUOTES, 'UTF-8') ?>" class="bo-inline-form" onsubmit="return confirm('Marquer comme no-show ?');">
+                                <input type="hidden" name="route" value="equipment">
+                                <input type="hidden" name="_action" value="reservation_noshow">
+                                <input type="hidden" name="reservation_id" value="<?= (int) $r['id'] ?>">
+                                <button type="submit" class="btn-bo btn-bo--decline">No-show</button>
+                              </form>
+                            <?php else: ?>
+                              —
+                            <?php endif; ?>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                      </tbody>
+                    </table>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </td>
           </tr>
         <?php endforeach; ?>
         </tbody>
@@ -145,6 +235,26 @@
       <input type="hidden" name="_action" value="equipment_delete">
       <input type="hidden" name="id" id="eq-delete-id" value="">
       <button type="submit" class="btn-bo" style="background:var(--red);color:#fff;margin-top:10px;">Supprimer</button>
+    </form>
+  </div>
+</div>
+
+<div class="bo-modal" id="modal-reject" aria-hidden="true">
+  <div class="bo-modal-backdrop" data-close="1"></div>
+  <div class="bo-modal-panel card">
+    <h3>Refuser la demande</h3>
+    <form method="post" action="<?= htmlspecialchars(bo_url('equipment'), ENT_QUOTES, 'UTF-8') ?>">
+      <input type="hidden" name="route" value="equipment">
+      <input type="hidden" name="_action" value="reservation_reject">
+      <input type="hidden" name="reservation_id" id="reject-id" value="">
+      <div class="form-group full">
+        <label>Motif obligatoire *</label>
+        <textarea name="rejection_reason" required rows="4" maxlength="2000"></textarea>
+      </div>
+      <div class="bo-modal-actions">
+        <button type="button" class="btn-bo btn-bo--decline" data-close="1">Annuler</button>
+        <button type="submit" class="btn-bo" style="background:var(--red);color:#fff;">Refuser</button>
+      </div>
     </form>
   </div>
 </div>

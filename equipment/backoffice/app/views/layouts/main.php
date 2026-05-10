@@ -14,7 +14,7 @@ if (!isset($messageType)) {
     $messageType = (string) ($_GET['type'] ?? '');
 }
 
-$eqCss = PUBLIC_WEB_PATH . '/css/equipment.css?v=6';
+$eqCss = PUBLIC_WEB_PATH . '/css/equipment.css?v=7';
 $leafletCss = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 
 cityzen_render_head('Back-office équipement', [$eqCss, $leafletCss], 'bo-body');
@@ -49,7 +49,6 @@ cityzen_render_head('Back-office équipement', [$eqCss, $leafletCss], 'bo-body')
             <a href="<?= htmlspecialchars(bo_url('dashboard'), ENT_QUOTES, 'UTF-8') ?>" class="<?= ($activeRoute ?? '') === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
             <a href="<?= htmlspecialchars(bo_url('equipment'), ENT_QUOTES, 'UTF-8') ?>" class="<?= ($activeRoute ?? '') === 'equipment' ? 'active' : '' ?>">Équipement (CRUD)</a>
             <a href="<?= htmlspecialchars(bo_url('types'), ENT_QUOTES, 'UTF-8') ?>" class="<?= ($activeRoute ?? '') === 'types' ? 'active' : '' ?>">Types</a>
-            <a href="<?= htmlspecialchars(bo_url('reservations'), ENT_QUOTES, 'UTF-8') ?>" class="<?= ($activeRoute ?? '') === 'reservations' ? 'active' : '' ?>">Réservations</a>
             <a href="<?= htmlspecialchars(bo_url('reports'), ENT_QUOTES, 'UTF-8') ?>" class="<?= ($activeRoute ?? '') === 'reports' ? 'active' : '' ?>">Rapports</a>
           </nav>
         </aside>
