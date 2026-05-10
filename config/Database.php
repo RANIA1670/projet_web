@@ -9,7 +9,7 @@ class Database
     private static $instance = null;
     private $pdo;
 
-    // Paramètres de connexion
+    // Paramètres de connexion (nom réel de la base MySQL : furum — voir init_database.sql et config/align_furum_schema.sql)
     private const DB_HOST = 'localhost';
     private const DB_NAME = 'furum';
     private const DB_USER = 'root';

@@ -2,10 +2,24 @@
 /**
  * Vue Front-Office : Modifier un post — validation avancée
  */
-$currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
-if ($currentUserId === 0) { header('Location: login.php'); exit; }
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) { header('Location: list_posts.php'); exit; }
+require_once __DIR__ . '/../../config/ForumRedirect.php';
+
+$currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$isAdmin = !empty($_SESSION['is_admin']);
+
+if ($currentUserId === 0) {
+    header('Location: ' . forum_list_url('page=home'));
+    exit;
+}
+
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    header('Location: ' . forum_list_url('page=home'));
+    exit;
+}
 $postId = (int)$_GET['id'];
 
 require_once __DIR__ . '/../../controllers/ForumController.php';
@@ -15,8 +29,14 @@ require_once __DIR__ . '/../../models/Post.php';
 $controller = new ForumController();
 $post       = Post::findById($postId);
 
-if (!$post)                                 { header('Location: list_posts.php'); exit; }
-if ($post->getUserId() !== $currentUserId)  { header('Location: view_post.php?id=' . $postId); exit; }
+if (!$post) {
+    header('Location: ' . forum_list_url('page=home'));
+    exit;
+}
+if ($post->getUserId() !== $currentUserId && !$isAdmin) {
+    header('Location: ' . forum_post_url($postId));
+    exit;
+}
 
 $errors = [];
 $old    = ['title' => $post->getTitle(), 'content' => $post->getContent()];
@@ -44,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors = $v->getErrors();
     } else {
         if ($controller->updatePost($postId, $title, $content)) {
-            header('Location: view_post.php?id=' . $postId . '&updated=1');
+            header('Location: ' . forum_post_url($postId) . '&updated=1');
             exit;
         }
         $errors['global'] = 'Erreur lors de la modification. Veuillez réessayer.';
@@ -105,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <nav class="topbar">
-    <a href="view_post.php?id=<?= $postId ?>" class="back-link">← Retour à la discussion</a>
+    <a href="<?= htmlspecialchars(forum_post_url($postId)) ?>" class="back-link">← Retour à la discussion</a>
     <span class="topbar-title">✏️ Modifier la discussion</span>
 </nav>
 <div class="page">
@@ -158,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-actions">
-                <a href="view_post.php?id=<?= $postId ?>" class="btn-cancel">❌ Annuler</a>
+                <a href="<?= htmlspecialchars(forum_post_url($postId)) ?>" class="btn-cancel">❌ Annuler</a>
                 <button type="submit" class="btn-submit" id="submitBtn">💾 Enregistrer</button>
             </div>
         </form>

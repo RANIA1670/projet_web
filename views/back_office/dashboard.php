@@ -3,15 +3,20 @@
  * Vue Back-Office : Tableau de bord de modération
  */
 
+require_once __DIR__ . '/../../config/ForumRedirect.php';
+
 $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 $isAdmin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true;
 
 if ($currentUserId === 0 || !$isAdmin) {
-    header('Location: login.php');
+    header('Location: ' . forum_list_url('page=home'));
     exit;
 }
 
 require_once __DIR__ . '/../../controllers/ForumController.php';
+require_once __DIR__ . '/../../models/Post.php';
+require_once __DIR__ . '/../../models/Report.php';
+require_once __DIR__ . '/../../models/EmailSubscription.php';
 $controller = new ForumController();
 
 // ── Actions POST ──────────────────────────────────────────────
@@ -24,6 +29,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['ite
         $message = $controller->deletePost($itemId)
             ? '<div class="toast toast-success">✅ Discussion supprimée avec succès.</div>'
             : '<div class="toast toast-error">❌ Erreur lors de la suppression.</div>';
+    } elseif ($action === 'feature_post') {
+        $message = Post::setFeatured($itemId, true)
+            ? '<div class="toast toast-success">📌 Post mis en avant.</div>'
+            : '<div class="toast toast-error">❌ Impossible de mettre en avant.</div>';
+    } elseif ($action === 'unfeature_post') {
+        $message = Post::setFeatured($itemId, false)
+            ? '<div class="toast toast-success">✅ Post retiré des mises en avant.</div>'
+            : '<div class="toast toast-error">❌ Impossible de retirer la mise en avant.</div>';
+    } elseif ($action === 'resolve_report') {
+        $message = Report::resolve($itemId)
+            ? '<div class="toast toast-success">✅ Signalement traité.</div>'
+            : '<div class="toast toast-error">❌ Impossible de traiter le signalement.</div>';
+    } elseif ($action === 'hide_post') {
+        $message = Report::hidePost($itemId)
+            ? '<div class="toast toast-success">🙈 Post masqué de la vue publique.</div>'
+            : '<div class="toast toast-error">❌ Impossible de masquer le post.</div>';
+    } elseif ($action === 'resolve_post_reports') {
+        $message = Report::resolveAllReportsForPost($itemId)
+            ? '<div class="toast toast-success">✅ Tous les signalements rejetés.</div>'
+            : '<div class="toast toast-error">❌ Impossible de rejeter les signalements.</div>';
     } elseif ($action === 'delete_reply') {
         require_once __DIR__ . '/../../models/Reply.php';
         $reply = Reply::findById($itemId);
@@ -55,15 +80,45 @@ if ($keyword !== '') {
     $posts = $controller->filterPosts(null, null, $sortBy, $order);
 }
 
-// ── Stats rapides ────────────────────────────────────────────
-$allPosts     = $controller->listAllPosts();
-$totalPosts   = count($allPosts);
-$totalReplies = 0;
-$totalLikes   = 0;
-foreach ($allPosts as $p) {
-    $totalReplies += $controller->countRepliesByPost($p->getId());
-    $totalLikes   += $controller->countPostLikes($p->getId());
+// ── Stats rapides (même source que la page Statistiques) ───────
+$stats        = $controller->getForumStats();
+$totalPosts   = (int)($stats['totalPosts'] ?? 0);
+$totalReplies = (int)($stats['totalReplies'] ?? 0);
+$totalLikes   = (int)($stats['totalLikes'] ?? 0);
+$openReports = Report::getOpenGrouped(20);
+$openReportsEnriched = Report::getOpenEnriched(50);
+$topReasons = Report::getTopReasons(5);
+$totalOpenReports = Report::countOpen();
+$activeEmailSubs = EmailSubscription::countActive();
+$recentEmailSubs = EmailSubscription::listRecent(5);
+
+// Grouper les signalements par post
+$reportsByPost = [];
+foreach ($openReportsEnriched as $report) {
+    $postId = (int)$report['post_id'];
+    if (!isset($reportsByPost[$postId])) {
+        $reportsByPost[$postId] = [
+            'post_id' => $postId,
+            'title' => $report['title'],
+            'content' => $report['content'],
+            'author_id' => $report['author_id'],
+            'post_status' => $report['post_status'],
+            'view_count' => $report['view_count'],
+            'report_count' => (int)$report['total_report_count'],
+            'reports' => []
+        ];
+    }
+    $reportsByPost[$postId]['reports'][] = [
+        'id' => (int)$report['id'],
+        'reason' => $report['reason'],
+        'reporter_user_id' => (int)$report['reporter_user_id'],
+        'created_at' => $report['created_at']
+    ];
 }
+// Trier par nombre de signalements
+uasort($reportsByPost, function($a, $b) {
+    return $b['report_count'] <=> $a['report_count'];
+});
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -76,17 +131,21 @@ foreach ($allPosts as $p) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --surface2: #22263a;
-            --accent: #6c63ff;
-            --accent2: #43e97b;
-            --accent3: #f7971e;
-            --accent4: #f64f59;
-            --text: #e2e8f0;
-            --muted: #8892a4;
-            --border: rgba(255,255,255,0.07);
-            --radius: 14px;
+            /* ── Palette CityZen officielle ── */
+            --bg:       #F4F6F8;          /* Fond principal */
+            --surface:  #2F3C4F;          /* Sidebar / Header */
+            --surface2: #3d5166;          /* Surface secondaire (hover) */
+            --accent:   #34495E;          /* Bleu marine */
+            --accent2:  #2ECC71;          /* Vert */
+            --accent3:  #F39C12;          /* Orange */
+            --accent4:  #E74C3C;          /* Rouge (erreurs) */
+            --card:     #FFFFFF;          /* Fond des cartes */
+            --text:     #2C3E50;          /* Titres principaux */
+            --muted:    #7F8C8D;          /* Textes secondaires */
+            --nav-inactive: #9BA4B5;      /* Liens inactifs sidebar */
+            --nav-active:   #FFFFFF;      /* Liens actifs sidebar */
+            --border:   rgba(0,0,0,0.07);
+            --radius:   12px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -106,9 +165,9 @@ foreach ($allPosts as $p) {
         .topbar-brand {
             font-size: 1.2rem;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #FFFFFF;
+            font-weight: 800;
+            letter-spacing: -.3px;
         }
         .topbar-nav { display: flex; gap: 10px; }
         .nav-btn {
@@ -117,12 +176,12 @@ foreach ($allPosts as $p) {
             text-decoration: none;
             font-size: .85rem;
             font-weight: 500;
-            color: var(--muted);
-            border: 1px solid var(--border);
+            color: var(--nav-inactive);
+            border: 1px solid rgba(255,255,255,.15);
             transition: all .2s;
         }
-        .nav-btn:hover { background: var(--surface2); color: var(--text); }
-        .nav-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .nav-btn:hover { background: rgba(255,255,255,.08); color: var(--nav-active); }
+        .nav-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
 
         /* Layout */
         .page { max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
@@ -148,7 +207,7 @@ foreach ($allPosts as $p) {
             margin-bottom: 32px;
         }
         .kpi-card {
-            background: var(--surface);
+            background: var(--card);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 22px 20px;
@@ -169,7 +228,7 @@ foreach ($allPosts as $p) {
 
         /* Search / Filter panel */
         .filter-panel {
-            background: var(--surface);
+            background: var(--card);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 22px 24px;
@@ -184,8 +243,8 @@ foreach ($allPosts as $p) {
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group label { font-size: .78rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
         .form-control {
-            background: var(--surface2);
-            border: 1px solid var(--border);
+            background: #F4F6F8;
+            border: 1px solid #D5D8DC;
             color: var(--text);
             border-radius: 8px;
             padding: 9px 14px;
@@ -195,10 +254,10 @@ foreach ($allPosts as $p) {
             transition: border-color .2s;
             width: 100%;
         }
-        .form-control:focus { border-color: var(--accent); }
-        .form-control option { background: var(--surface2); }
+        .form-control:focus { border-color: var(--accent2); }
+        .form-control option { background: #fff; }
         .btn-search {
-            background: var(--accent);
+            background: var(--accent2);
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -212,7 +271,7 @@ foreach ($allPosts as $p) {
         }
         .btn-search:hover { opacity: .85; }
         .btn-reset {
-            background: var(--surface2);
+            background: #E8ECF0;
             color: var(--muted);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -236,13 +295,13 @@ foreach ($allPosts as $p) {
 
         /* Table */
         .table-wrap {
-            background: var(--surface);
+            background: var(--card);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             overflow: hidden;
         }
         table { width: 100%; border-collapse: collapse; }
-        thead { background: var(--surface2); }
+        thead { background: #F4F6F8; }
         th {
             padding: 14px 18px;
             text-align: left;
@@ -255,7 +314,7 @@ foreach ($allPosts as $p) {
         td { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: .875rem; vertical-align: middle; }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr { transition: background .15s; }
-        tbody tr:hover { background: var(--surface2); }
+        tbody tr:hover { background: #F8FAFB; }
 
         .post-title-link {
             color: var(--text);
@@ -278,8 +337,8 @@ foreach ($allPosts as $p) {
             font-size: .76rem;
             font-weight: 600;
         }
-        .chip-replies { background: rgba(108,99,255,.15); color: var(--accent); }
-        .chip-views   { background: rgba(67,233,123,.10); color: var(--accent2); }
+        .chip-replies { background: rgba(52,73,94,.12); color: var(--accent); }
+        .chip-views   { background: rgba(46,204,113,.12); color: #27AE60; }
 
         .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
         .ab {
@@ -295,9 +354,9 @@ foreach ($allPosts as $p) {
             font-family: inherit;
         }
         .ab:hover { opacity: .8; }
-        .ab-view   { background: rgba(108,99,255,.2); color: var(--accent); }
-        .ab-edit   { background: rgba(247,151,30,.2); color: var(--accent3); }
-        .ab-delete { background: rgba(246,79,89,.2);  color: var(--accent4); }
+        .ab-view   { background: rgba(52,73,94,.10);  color: var(--accent); }
+        .ab-edit   { background: rgba(243,156,18,.15); color: #D68910; }
+        .ab-delete { background: rgba(231,76,60,.12);  color: var(--accent4); }
 
         /* Replies expand */
         .replies-toggle {
@@ -318,8 +377,8 @@ foreach ($allPosts as $p) {
 
         .replies-wrap {
             padding: 16px 22px;
-            background: rgba(0,0,0,.2);
-            border-left: 3px solid var(--accent);
+            background: #F8FAFB;
+            border-left: 3px solid var(--accent2);
         }
         .reply-item {
             padding: 10px 0;
@@ -358,9 +417,9 @@ foreach ($allPosts as $p) {
 <nav class="topbar">
     <div class="topbar-brand">🛠️ CityZen Admin</div>
     <div class="topbar-nav">
-        <a href="dashboard.php" class="nav-btn active">🏠 Dashboard</a>
-        <a href="statistics.php" class="nav-btn">📈 Statistiques</a>
-        <a href="../front_office/list_posts.php" class="nav-btn">👁️ Forum</a>
+        <a href="<?= htmlspecialchars(forum_admin_nav_base()) ?>" class="nav-btn active">🏠 Dashboard</a>
+        <a href="<?= htmlspecialchars(forum_admin_nav_base()) ?>?page=statistics" class="nav-btn">📈 Statistiques</a>
+        <a href="<?= htmlspecialchars(forum_list_url('page=home')) ?>" class="nav-btn">👁️ Forum</a>
     </div>
 </nav>
 
@@ -382,11 +441,187 @@ foreach ($allPosts as $p) {
             <div class="kpi-value"><?= $totalLikes ?></div>
             <div class="kpi-label">👍 Likes</div>
         </div>
+        <div class="kpi-card purple">
+            <div class="kpi-value"><?= $totalOpenReports ?></div>
+            <div class="kpi-label">🚩 Signalements ouverts</div>
+        </div>
+        <div class="kpi-card green">
+            <div class="kpi-value"><?= $activeEmailSubs ?></div>
+            <div class="kpi-label">📧 Abonnements email</div>
+        </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════════════════════════════
+         ░░░ MODÉRATION AVANCÉE - SIGNALEMENTS ░░░
+         ═════════════════════════════════════════════════════════════════ -->
+    
+    <div class="table-wrap" style="margin-bottom:28px;">
+        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div>🛡️ Modération avancée — Signalements</div>
+            <div style="font-size:.75rem;color:var(--muted);font-weight:500;">Total: <strong style="color:var(--accent4);"><?= $totalOpenReports ?></strong></div>
+        </div>
+
+        <?php if ($totalOpenReports === 0): ?>
+            <div class="empty-state" style="padding:40px 20px;">
+                <div class="emoji" style="font-size:4rem;margin-bottom:16px;">✨</div>
+                <p style="font-size:1rem;color:var(--accent2);font-weight:600;">Excellent ! Aucun signalement en attente.</p>
+                <p style="font-size:.85rem;color:var(--muted);margin-top:6px;">Votre forum est bien modéré.</p>
+            </div>
+        <?php else: ?>
+            <!-- Stats des signalements -->
+            <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+                <div style="background:#FEF3E2;border-radius:8px;padding:12px;border-left:4px solid var(--accent3);">
+                    <div style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Total signalements</div>
+                    <div style="font-size:1.5rem;font-weight:800;color:var(--accent3);"><?= $totalOpenReports ?></div>
+                </div>
+                <div style="background:#E3F2FD;border-radius:8px;padding:12px;border-left:4px solid var(--accent);">
+                    <div style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Posts signalés</div>
+                    <div style="font-size:1.5rem;font-weight:800;color:var(--accent);"><?= count($reportsByPost) ?></div>
+                </div>
+                <div style="background:#F0F4F8;border-radius:8px;padding:12px;border-left:4px solid var(--muted);">
+                    <div style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Raison majeure</div>
+                    <div style="font-size:.95rem;font-weight:600;color:var(--text);">
+                        <?= !empty($topReasons) ? htmlspecialchars((string)($topReasons[0]['reason'] ?? '')) : '—' ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Posts signalés - Vue détaillée -->
+            <div style="padding:16px 18px;">
+                <?php foreach ($reportsByPost as $postId => $post): ?>
+                    <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;background:#F8FAFB;">
+                        <!-- En-tête du post -->
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+                            <div style="flex:1;">
+                                <div style="font-weight:700;color:var(--text);font-size:.95rem;margin-bottom:4px;">
+                                    <a href="<?= htmlspecialchars(forum_post_url($postId)) ?>" style="color:var(--accent2);text-decoration:none;">
+                                        #<?= $postId ?> — <?= htmlspecialchars(substr((string)$post['title'], 0, 60)) ?>
+                                    </a>
+                                </div>
+                                <div style="font-size:.78rem;color:var(--muted);">
+                                    👤 Auteur #<?= $post['author_id'] ?> • 
+                                    👁️ <?= $post['view_count'] ?> vues • 
+                                    <span style="padding:2px 6px;background:<?= $post['post_status'] === 'Masqué' ? 'rgba(231,76,60,.15)' : 'rgba(46,204,113,.15)' ?>;border-radius:4px;color:<?= $post['post_status'] === 'Masqué' ? 'var(--accent4)' : 'var(--accent2)' ?>;font-size:.7rem;font-weight:600;">
+                                        <?= htmlspecialchars((string)$post['post_status']) ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="text-align:right;flex-shrink:0;">
+                                <div style="font-size:1.8rem;font-weight:800;color:var(--accent4);"><?= $post['report_count'] ?></div>
+                                <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600;">Signalements</div>
+                            </div>
+                        </div>
+
+                        <!-- Extrait du contenu -->
+                        <div style="padding:10px 12px;background:#FFFFFF;border-radius:6px;border-left:3px solid var(--accent3);margin-bottom:12px;font-size:.8rem;color:var(--text);line-height:1.4;">
+                            <?= htmlspecialchars(substr((string)$post['content'], 0, 150)) ?><?= strlen((string)$post['content']) > 150 ? '...' : '' ?>
+                        </div>
+
+                        <!-- Motifs de signalement -->
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:6px;">Raisons rapportées :</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                                <?php 
+                                $reasons = [];
+                                foreach ($post['reports'] as $report) {
+                                    $reason = htmlspecialchars((string)$report['reason']);
+                                    if (!isset($reasons[$reason])) {
+                                        $reasons[$reason] = 0;
+                                    }
+                                    $reasons[$reason]++;
+                                }
+                                foreach ($reasons as $reason => $count): 
+                                ?>
+                                    <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FFFFFF;border:1px solid var(--border);border-radius:20px;font-size:.75rem;font-weight:600;color:var(--text);">
+                                        🏷️ <?= $reason ?> <span style="background:var(--accent4);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;font-weight:700;margin-left:2px;"><?= $count ?></span>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- Signalements individuels -->
+                        <div style="margin-bottom:12px;">
+                            <button onclick="toggleReportDetails(<?= $postId ?>)" style="background:none;border:none;color:var(--accent);font-size:.75rem;font-weight:600;cursor:pointer;text-decoration:underline;font-family:inherit;">
+                                📋 Afficher les <?= count($post['reports']) ?> signalement<?= count($post['reports']) > 1 ? 's' : '' ?> →
+                            </button>
+                            <div id="reports-<?= $postId ?>" style="display:none;margin-top:8px;padding:10px;background:#FFFFFF;border-radius:6px;border:1px solid var(--border);font-size:.8rem;">
+                                <?php foreach ($post['reports'] as $idx => $report): ?>
+                                    <div style="padding:6px 0;border-bottom:<?= $idx < count($post['reports']) - 1 ? '1px solid var(--border)' : 'none' ?>;">
+                                        <div style="color:var(--muted);font-size:.75rem;">👤 #<?= $report['reporter_user_id'] ?> • 📅 <?= date('d/m/Y H:i', strtotime((string)$report['created_at'])) ?></div>
+                                        <div style="color:var(--text);margin-top:2px;">📌 <?= htmlspecialchars((string)$report['reason']) ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;">
+                            <a href="<?= htmlspecialchars(forum_post_url($postId)) ?>" class="ab ab-view" style="background:rgba(52,73,94,.1);padding:8px 14px;border-radius:6px;font-size:.8rem;font-weight:600;text-decoration:none;color:var(--accent);cursor:pointer;">👁️ Voir le post</a>
+                            
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="resolve_post_reports">
+                                <input type="hidden" name="item_id" value="<?= $postId ?>">
+                                <button type="submit" class="ab" style="background:rgba(46,204,113,.1);padding:8px 14px;border:none;border-radius:6px;font-size:.8rem;font-weight:600;color:var(--accent2);cursor:pointer;font-family:inherit;">✅ Rejeter les signalements</button>
+                            </form>
+
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="hide_post">
+                                <input type="hidden" name="item_id" value="<?= $postId ?>">
+                                <button type="submit" class="ab" style="background:rgba(243,156,18,.1);padding:8px 14px;border:none;border-radius:6px;font-size:.8rem;font-weight:600;color:var(--accent3);cursor:pointer;font-family:inherit;">🙈 Masquer le post</button>
+                            </form>
+
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr ? Cette action est définitive.');">
+                                <input type="hidden" name="action" value="delete_post">
+                                <input type="hidden" name="item_id" value="<?= $postId ?>">
+                                <button type="submit" class="ab" style="background:rgba(231,76,60,.1);padding:8px 14px;border:none;border-radius:6px;font-size:.8rem;font-weight:600;color:var(--accent4);cursor:pointer;font-family:inherit;">🗑️ Supprimer définitivement</button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <script>
+                function toggleReportDetails(postId) {
+                    const el = document.getElementById('reports-' + postId);
+                    if (el) {
+                        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                    }
+                }
+                function toggleReportDetails(postId) {
+                    const el = document.getElementById('reports-' + postId);
+                    if (el) {
+                        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                    }
+                }
+            </script>
+        <?php endif; ?>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:20px;">
+        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--border);">🤝 Relation utilisateurs — derniers abonnements email</div>
+        <?php if (empty($recentEmailSubs)): ?>
+            <div class="empty-state" style="padding:20px;">Aucun abonnement email actif.</div>
+        <?php else: ?>
+            <table>
+                <thead>
+                    <tr><th>Email</th><th>Post</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($recentEmailSubs as $sub): ?>
+                        <tr>
+                            <td><?= htmlspecialchars((string)$sub['email']) ?></td>
+                            <td><a class="post-title-link" href="<?= htmlspecialchars(forum_post_url((int)$sub['post_id'])) ?>">Post #<?= (int)$sub['post_id'] ?></a></td>
+                            <td><?= date('d/m/Y H:i', strtotime((string)$sub['created_at'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 
     <!-- Filter Panel -->
     <div class="filter-panel">
-        <form method="GET" action="dashboard.php">
+        <form method="GET" action="<?= htmlspecialchars(forum_admin_nav_base()) ?>">
             <div class="form-group" style="grid-column:1">
                 <label for="q">🔍 Recherche</label>
                 <input class="form-control" type="text" id="q" name="q"
@@ -465,7 +700,7 @@ foreach ($allPosts as $p) {
                         <!-- Post row -->
                         <tr>
                             <td>
-                                <a href="../front_office/view_post.php?id=<?= $pid ?>"
+                                <a href="<?= htmlspecialchars(forum_post_url($pid)) ?>"
                                    class="post-title-link">
                                     <?= htmlspecialchars($post->getTitle()) ?>
                                 </a>
@@ -492,11 +727,16 @@ foreach ($allPosts as $p) {
                             </td>
                             <td>
                                 <div class="action-btns">
-                                    <a href="../front_office/view_post.php?id=<?= $pid ?>"
+                                    <a href="<?= htmlspecialchars(forum_post_url($pid)) ?>"
                                        class="ab ab-view">Voir</a>
-                                    <a href="edit_post.php?id=<?= $pid ?>"
+                                    <a href="<?= htmlspecialchars(forum_admin_nav_base()) ?>?page=edit_post&id=<?= $pid ?>"
                                        class="ab ab-edit">Modifier</a>
-                                    <form method="POST" style="display:inline"
+                                    <form method="POST" action="<?= htmlspecialchars(forum_admin_nav_base()) ?>" style="display:inline;">
+                                        <input type="hidden" name="action" value="<?= (method_exists($post, 'getIsFeatured') && (int)$post->getIsFeatured() === 1) ? 'unfeature_post' : 'feature_post' ?>">
+                                        <input type="hidden" name="item_id" value="<?= $pid ?>">
+                                        <button type="submit" class="ab ab-view"><?= (method_exists($post, 'getIsFeatured') && (int)$post->getIsFeatured() === 1) ? 'Retirer avant' : 'Mettre avant' ?></button>
+                                    </form>
+                                    <form method="POST" action="<?= htmlspecialchars(forum_admin_nav_base()) ?>" style="display:inline"
                                           onsubmit="return confirm('Supprimer cette discussion ?')">
                                         <input type="hidden" name="action" value="delete_post">
                                         <input type="hidden" name="item_id" value="<?= $pid ?>">
@@ -522,9 +762,9 @@ foreach ($allPosts as $p) {
                                                     <?= mb_strlen($reply->getContent()) > 200 ? '…' : '' ?>
                                                 </div>
                                                 <div class="reply-actions">
-                                                    <a href="edit_reply.php?id=<?= $reply->getId() ?>&post_id=<?= $pid ?>"
+                                                    <a href="<?= htmlspecialchars(forum_admin_nav_base()) ?>?page=edit_reply&id=<?= $reply->getId() ?>&post_id=<?= $pid ?>"
                                                        class="ab ab-edit">Modifier</a>
-                                                    <form method="POST" style="display:inline"
+                                                    <form method="POST" action="<?= htmlspecialchars(forum_admin_nav_base()) ?>" style="display:inline"
                                                           onsubmit="return confirm('Supprimer cette réponse ?')">
                                                         <input type="hidden" name="action" value="delete_reply">
                                                         <input type="hidden" name="item_id" value="<?= $reply->getId() ?>">

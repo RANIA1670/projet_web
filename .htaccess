@@ -1,0 +1,9 @@
+# Activation du moteur de réécriture d'URL
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Rediriger tous les fichiers non-existants vers index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?page=$1 [QSA,L]
+</IfModule>

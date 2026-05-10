@@ -14,14 +14,12 @@ class Post
     private string $createdAt;
     private string $updatedAt;
     private int $viewCount;
+    private bool $isFeatured;
+    private string $status;
     private ?PDO $db;
 
     /**
      * Constructeur
-     * 
-     * @param int $userId ID de l'utilisateur
-     * @param string $title Titre du post
-     * @param string $content Contenu du post
      */
     public function __construct(
         int $userId = 0,
@@ -32,6 +30,8 @@ class Post
         $this->title = $title;
         $this->content = $content;
         $this->viewCount = 0;
+        $this->isFeatured = false;
+        $this->status = 'Actif';
         $this->createdAt = date('Y-m-d H:i:s');
         $this->updatedAt = date('Y-m-d H:i:s');
         $this->db = Database::getInstance()->getConnection();
@@ -110,6 +110,16 @@ class Post
         return $this->viewCount;
     }
 
+    public function isFeatured(): bool
+    {
+        return $this->isFeatured;
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
     // ====== SETTERS ======
 
     /**
@@ -175,6 +185,24 @@ class Post
         $this->viewCount = $viewCount;
     }
 
+    /**
+     * Définit si le post est en évidence
+     * @param bool $isFeatured
+     */
+    public function setIsFeatured(bool $isFeatured): void
+    {
+        $this->isFeatured = $isFeatured;
+    }
+
+    /**
+     * Définit le statut du post
+     * @param string $status
+     */
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
+    }
+
     // ====== MÉTHODES MÉTIER ======
 
     /**
@@ -185,17 +213,21 @@ class Post
     public function save(): bool
     {
         try {
-            $sql = "INSERT INTO posts (user_id, title, content, created_at, updated_at, view_count)
-                    VALUES (:user_id, :title, :content, :created_at, :updated_at, :view_count)";
+            $sql = "INSERT INTO posts 
+                    (user_id, title, content, view_count, created_at, updated_at, is_featured, status)
+                    VALUES 
+                    (:user_id, :title, :content, :view_count, :created_at, :updated_at, :is_featured, :status)";
 
             $stmt = $this->db->prepare($sql);
             $result = $stmt->execute([
                 ':user_id' => $this->userId,
                 ':title' => $this->title,
                 ':content' => $this->content,
+                ':view_count' => $this->viewCount,
                 ':created_at' => $this->createdAt,
                 ':updated_at' => $this->updatedAt,
-                ':view_count' => $this->viewCount,
+                ':is_featured' => $this->isFeatured ? 1 : 0,
+                ':status' => $this->status,
             ]);
 
             if ($result) {
@@ -221,7 +253,7 @@ class Post
             
             $sql = "UPDATE posts 
                     SET user_id = :user_id, title = :title, content = :content, 
-                        updated_at = :updated_at, view_count = :view_count
+                        view_count = :view_count, updated_at = :updated_at, is_featured = :is_featured, status = :status
                     WHERE id = :id";
 
             $stmt = $this->db->prepare($sql);
@@ -229,8 +261,10 @@ class Post
                 ':user_id' => $this->userId,
                 ':title' => $this->title,
                 ':content' => $this->content,
-                ':updated_at' => $this->updatedAt,
                 ':view_count' => $this->viewCount,
+                ':updated_at' => $this->updatedAt,
+                ':is_featured' => $this->isFeatured ? 1 : 0,
+                ':status' => $this->status,
                 ':id' => $this->id,
             ]);
         } catch (PDOException $e) {
@@ -256,12 +290,6 @@ class Post
         }
     }
 
-    /**
-     * Récupère un post par son ID
-     * 
-     * @param int $id
-     * @return Post|null
-     */
     public static function findById(int $id): ?Post
     {
         try {
@@ -277,10 +305,11 @@ class Post
 
             $post = new self($data['user_id'], $data['title'], $data['content']);
             $post->id = $data['id'];
+            $post->viewCount = $data['view_count'];
             $post->createdAt = $data['created_at'];
             $post->updatedAt = $data['updated_at'];
-            $post->viewCount = $data['view_count'];
-
+            $post->isFeatured = (bool)$data['is_featured'];
+            $post->status = $data['status'] ?? 'Actif';
             return $post;
         } catch (PDOException $e) {
             error_log('Erreur lors de la récupération du post : ' . $e->getMessage());
@@ -305,9 +334,11 @@ class Post
             while ($data = $stmt->fetch()) {
                 $post = new self($data['user_id'], $data['title'], $data['content']);
                 $post->id = $data['id'];
+                $post->viewCount = $data['view_count'];
                 $post->createdAt = $data['created_at'];
                 $post->updatedAt = $data['updated_at'];
-                $post->viewCount = $data['view_count'];
+                $post->isFeatured = (bool)$data['is_featured'];
+                $post->status = $data['status'] ?? 'Actif';
                 $posts[] = $post;
             }
 
@@ -359,9 +390,11 @@ class Post
             while ($data = $stmt->fetch()) {
                 $post = new self($data['user_id'], $data['title'], $data['content']);
                 $post->id = $data['id'];
+                $post->viewCount = $data['view_count'];
                 $post->createdAt = $data['created_at'];
                 $post->updatedAt = $data['updated_at'];
-                $post->viewCount = $data['view_count'];
+                $post->isFeatured = (bool)$data['is_featured'];
+                $post->status = $data['status'] ?? 'Actif';
                 $posts[] = $post;
             }
 
@@ -369,6 +402,34 @@ class Post
         } catch (PDOException $e) {
             error_log('Erreur lors de la récupération des posts de l\'utilisateur : ' . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Récupère le dernier post d'un utilisateur.
+     */
+    public static function findLatestByUserId(int $userId): ?Post
+    {
+        try {
+            $db = Database::getInstance()->getConnection();
+            $sql = "SELECT * FROM posts WHERE user_id = :user_id ORDER BY id DESC LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':user_id' => $userId]);
+            $data = $stmt->fetch();
+            if (!$data) {
+                return null;
+            }
+            $post = new self($data['user_id'], $data['title'], $data['content']);
+            $post->id = $data['id'];
+            $post->viewCount = $data['view_count'];
+            $post->createdAt = $data['created_at'];
+            $post->updatedAt = $data['updated_at'];
+            $post->isFeatured = (bool)$data['is_featured'];
+            $post->status = $data['status'] ?? 'Actif';
+            return $post;
+        } catch (PDOException $e) {
+            error_log('Erreur findLatestByUserId : ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -390,18 +451,21 @@ class Post
         try {
             $db  = Database::getInstance()->getConnection();
             $sql = "SELECT * FROM posts
-                    WHERE title LIKE :kw OR content LIKE :kw
+                    WHERE title LIKE ? OR content LIKE ?
                     ORDER BY {$sortBy} {$order}";
             $stmt = $db->prepare($sql);
-            $stmt->execute([':kw' => '%' . $keyword . '%']);
+            $searchTerm = '%' . $keyword . '%';
+            $stmt->execute([$searchTerm, $searchTerm]);
 
             $posts = [];
             while ($data = $stmt->fetch()) {
                 $post = new self($data['user_id'], $data['title'], $data['content']);
-                $post->id        = $data['id'];
+                $post->id = $data['id'];
+                $post->viewCount = $data['view_count'];
                 $post->createdAt = $data['created_at'];
                 $post->updatedAt = $data['updated_at'];
-                $post->viewCount = $data['view_count'];
+                $post->isFeatured = (bool)$data['is_featured'];
+                $post->status = $data['status'] ?? 'Actif';
                 $posts[] = $post;
             }
             return $posts;
@@ -457,10 +521,12 @@ class Post
             $posts = [];
             while ($data = $stmt->fetch()) {
                 $post = new self($data['user_id'], $data['title'], $data['content']);
-                $post->id        = $data['id'];
+                $post->id = $data['id'];
+                $post->viewCount = $data['view_count'];
                 $post->createdAt = $data['created_at'];
                 $post->updatedAt = $data['updated_at'];
-                $post->viewCount = $data['view_count'];
+                $post->isFeatured = (bool)$data['is_featured'];
+                $post->status = $data['status'] ?? 'Actif';
                 $posts[] = $post;
             }
             return $posts;
@@ -500,8 +566,9 @@ class Post
             // Top 5 posts les plus likés
             $sqlTopLiked = "SELECT p.id, p.title, COUNT(l.id) AS like_count
                             FROM posts p
-                            LEFT JOIN likes l ON l.post_id = p.id
-                            GROUP BY p.id
+                            LEFT JOIN likes l ON l.post_id = p.id AND (l.reply_id IS NULL OR l.reply_id = 0)
+                            GROUP BY p.id, p.title
+                            HAVING COUNT(l.id) > 0
                             ORDER BY like_count DESC
                             LIMIT 5";
             $stmtTL = $db->prepare($sqlTopLiked);
@@ -514,18 +581,54 @@ class Post
             $totalLikes   = (int)$db->query('SELECT COUNT(*) FROM likes')->fetchColumn();
             $totalViews   = (int)($db->query('SELECT COALESCE(SUM(view_count),0) FROM posts')->fetchColumn());
 
-            return compact('monthly', 'topViewed', 'topLiked', 'totalPosts', 'totalReplies', 'totalLikes', 'totalViews');
+            // Likes explicites (alignés avec le comptage « J’aime » côté posts / réponses)
+            $likesOnPosts = (int)$db->query(
+                "SELECT COUNT(*) FROM likes WHERE post_id IS NOT NULL AND post_id > 0
+                 AND (reply_id IS NULL OR reply_id = 0)"
+            )->fetchColumn();
+            $likesOnReplies = (int)$db->query(
+                'SELECT COUNT(*) FROM likes WHERE reply_id IS NOT NULL AND reply_id > 0'
+            )->fetchColumn();
+
+            return compact(
+                'monthly',
+                'topViewed',
+                'topLiked',
+                'totalPosts',
+                'totalReplies',
+                'totalLikes',
+                'totalViews',
+                'likesOnPosts',
+                'likesOnReplies'
+            );
         } catch (PDOException $e) {
             error_log('Erreur stats agrégées : ' . $e->getMessage());
             return [
-                'monthly'      => [],
-                'topViewed'    => [],
-                'topLiked'     => [],
-                'totalPosts'   => 0,
-                'totalReplies' => 0,
-                'totalLikes'   => 0,
-                'totalViews'   => 0,
+                'monthly'        => [],
+                'topViewed'      => [],
+                'topLiked'       => [],
+                'totalPosts'     => 0,
+                'totalReplies'   => 0,
+                'totalLikes'     => 0,
+                'totalViews'     => 0,
+                'likesOnPosts'   => 0,
+                'likesOnReplies' => 0,
             ];
+        }
+    }
+
+    public static function setFeatured(int $postId, bool $featured): bool
+    {
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE posts SET is_featured = :f WHERE id = :id");
+            return $stmt->execute([
+                ':f' => $featured ? 1 : 0,
+                ':id' => $postId,
+            ]);
+        } catch (PDOException $e) {
+            error_log('Erreur setFeatured : ' . $e->getMessage());
+            return false;
         }
     }
 }

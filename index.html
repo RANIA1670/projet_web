@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum CityZen - Page d'Accueil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        
+        .links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        a {
+            display: inline-block;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-front {
+            background-color: #667eea;
+            color: white;
+        }
+        
+        .btn-front:hover {
+            background-color: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-admin {
+            background-color: #764ba2;
+            color: white;
+        }
+        
+        .btn-admin:hover {
+            background-color: #63408a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+        }
+        
+        .info {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .code {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Forum CityZen</h1>
+        <p class="subtitle">Bienvenue! Sélectionnez votre interface</p>
+        
+        <div class="links">
+            <a href="front.php" class="btn-front">👥 Frontend (Public)</a>
+            <a href="admin.php" class="btn-admin">⚙️ Backend (Admin)</a>
+        </div>
+        
+        <div class="info">
+            <h3>URLs d'accès directe:</h3>
+            <div class="code">
+                🌐 Frontend: <strong>http://localhost/web-mardi/front.php</strong>
+            </div>
+            <div class="code">
+                🔧 Admin: <strong>http://localhost/web-mardi/admin.php</strong>
+            </div>
+            <p style="margin-top: 20px;">✅ Les deux interfaces sont maintenant accessibles!</p>
+        </div>
+    </div>
+</body>
+</html>

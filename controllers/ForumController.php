@@ -4,6 +4,7 @@
  * CRUD Posts + Replies + gestion des likes.
  */
 
+require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Post.php';
 require_once __DIR__ . '/../models/Reply.php';
 require_once __DIR__ . '/../models/Like.php';
@@ -40,17 +41,20 @@ class ForumController
     /**
      * CRUD générique: show
      * $entity = 'post' | 'reply'
+     *
+     * @param bool $incrementPostViews Compteur « vues » du post (GET lecture seule ; pas sur POST like/réponse).
      */
-    public function show(string $entity, int $id)
+    public function show(string $entity, int $id, bool $incrementPostViews = true)
     {
         if ($entity === 'reply') {
             return Reply::findById($id);
         }
 
         $post = Post::findById($id);
-        if ($post) {
+        if ($post && $incrementPostViews) {
             $post->incrementViewCount();
         }
+
         return $post;
     }
 
@@ -70,7 +74,9 @@ class ForumController
         $userId = (int)($data['user_id'] ?? 0);
         $title = trim((string)($data['title'] ?? ''));
         $content = trim((string)($data['content'] ?? ''));
-        return $this->createPost($userId, $title, $content);
+        $lat = isset($data['latitude']) && $data['latitude'] !== '' ? (float)$data['latitude'] : null;
+        $lng = isset($data['longitude']) && $data['longitude'] !== '' ? (float)$data['longitude'] : null;
+        return $this->createPost($userId, $title, $content, $lat, $lng);
     }
 
     /**
@@ -130,20 +136,28 @@ class ForumController
         return $this->listAll('post');
     }
 
-    public function showPost(int $id): ?Post
+    public function showPost(int $id, bool $incrementViews = true): ?Post
     {
-        $post = $this->show('post', $id);
+        $post = $this->show('post', $id, $incrementViews);
         return $post instanceof Post ? $post : null;
     }
 
-    public function createPost(int $userId, string $title, string $content): bool
+    public function createPost(int $userId, string $title, string $content, ?float $lat = null, ?float $lng = null): bool
     {
         if ($userId <= 0 || $title === '' || $content === '') {
             return false;
         }
 
+        $userId = $this->ensureForumUserId($userId);
+
         $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
         $safeContent = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
+
+        if (function_exists('mb_substr')) {
+            $safeTitle = mb_substr($safeTitle, 0, 150, 'UTF-8');
+        } else {
+            $safeTitle = substr($safeTitle, 0, 150);
+        }
 
         $post = new Post($userId, $safeTitle, $safeContent);
         return $post->save();
@@ -156,7 +170,13 @@ class ForumController
             return false;
         }
 
-        $post->setTitle(htmlspecialchars($title, ENT_QUOTES, 'UTF-8'));
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+        if (function_exists('mb_substr')) {
+            $safeTitle = mb_substr($safeTitle, 0, 150, 'UTF-8');
+        } else {
+            $safeTitle = substr($safeTitle, 0, 150);
+        }
+        $post->setTitle($safeTitle);
         $post->setContent(htmlspecialchars($content, ENT_QUOTES, 'UTF-8'));
         return $post->update();
     }
@@ -183,6 +203,36 @@ class ForumController
         }
 
         return $post->delete();
+    }
+
+    /**
+     * Rejette les signalements d'un post et s'assure qu'il est 'Actif'
+     */
+    public function validerPost(int $postId): bool
+    {
+        $post = Post::findById($postId);
+        if (!$post) {
+            return false;
+        }
+
+        // Met à jour le statut du post en Actif
+        $post->setStatus('Actif');
+        $post->update();
+
+        // Résout tous les signalements liés à ce post
+        return Report::rejectReportsForPost($postId);
+    }
+
+    /**
+     * Supprime un post ainsi que tous ses signalements
+     */
+    public function supprimerPost(int $postId): bool
+    {
+        // Supprime les signalements d'abord (ou via CASCADE si on l'avait)
+        Report::deleteReportsForPost($postId);
+
+        // Puis supprime le post et ses dépendances (réponses, likes) via la méthode existante
+        return $this->deletePost($postId);
     }
 
     public function getPostsByUser(int $userId): array
@@ -214,8 +264,57 @@ class ForumController
             return false;
         }
 
+        $userId = $this->ensureForumUserId($userId);
+
         $reply = new Reply($postId, $userId, htmlspecialchars($content, ENT_QUOTES, 'UTF-8'));
         return $reply->save();
+    }
+
+    /**
+     * Garantit qu'une ligne users existe pour respecter la FK (posts.user_id, replies.user_id).
+     */
+    private function ensureForumUserId(int $userId): int
+    {
+        if ($userId <= 0) {
+            $userId = 1;
+        }
+
+        try {
+            $pdo = Database::getInstance()->getConnection();
+        } catch (Throwable $e) {
+            return $userId;
+        }
+
+        try {
+            $check = $pdo->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+            $check->execute([$userId]);
+            if ($check->fetchColumn()) {
+                return $userId;
+            }
+
+            $email = 'u' . $userId . '_' . bin2hex(random_bytes(4)) . '@forum.local';
+            $username = 'Visiteur_' . $userId . '_' . bin2hex(random_bytes(3));
+            $hash = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
+
+            $pdo->prepare(
+                'INSERT INTO users (id, username, email, password) VALUES (?, ?, ?, ?)'
+            )->execute([$userId, $username, $email, $hash]);
+
+            return $userId;
+        } catch (Throwable $e) {
+            error_log('ensureForumUserId: ' . $e->getMessage());
+            try {
+                $pdo = Database::getInstance()->getConnection();
+                $any = $pdo->query('SELECT id FROM users ORDER BY id ASC LIMIT 1')->fetchColumn();
+                if ($any) {
+                    return (int) $any;
+                }
+            } catch (Throwable $e2) {
+                error_log('ensureForumUserId fallback: ' . $e2->getMessage());
+            }
+        }
+
+        return $userId;
     }
 
     public function updateReply(int $replyId, string $content): bool

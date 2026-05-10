@@ -3,11 +3,13 @@
  * Vue Back-Office : Statistiques du forum
  */
 
+require_once __DIR__ . '/../../config/ForumRedirect.php';
+
 $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 $isAdmin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true;
 
 if ($currentUserId === 0 || !$isAdmin) {
-    header('Location: login.php');
+    header('Location: ' . forum_admin_nav_base());
     exit;
 }
 
@@ -20,8 +22,10 @@ $topViewed    = $stats['topViewed']    ?? [];
 $topLiked     = $stats['topLiked']    ?? [];
 $totalPosts   = $stats['totalPosts']   ?? 0;
 $totalReplies = $stats['totalReplies'] ?? 0;
-$totalLikes   = $stats['totalLikes']   ?? 0;
-$totalViews   = $stats['totalViews']   ?? 0;
+$totalLikes     = $stats['totalLikes']     ?? 0;
+$totalViews     = $stats['totalViews']     ?? 0;
+$likesOnPosts   = (int)($stats['likesOnPosts']   ?? 0);
+$likesOnReplies = (int)($stats['likesOnReplies'] ?? 0);
 
 // Préparer les données pour le graphique mensuel
 $maxCount  = 1;
@@ -173,6 +177,14 @@ foreach ($monthly as $m) {
         .kpi-card.red     .kpi-value { color: var(--accent4); }
 
         .kpi-label { color: var(--muted); font-size: .875rem; font-weight: 500; }
+        .kpi-hint {
+            color: var(--muted);
+            font-size: .72rem;
+            font-weight: 400;
+            margin-top: 6px;
+            line-height: 1.35;
+            max-width: 220px;
+        }
 
         /* ── Section heading ── */
         .section-heading {
@@ -339,9 +351,9 @@ foreach ($monthly as $m) {
         <span class="icon">📊</span> CityZen Admin
     </div>
     <div class="topbar-nav">
-        <a href="dashboard.php" class="nav-btn">🛠️ Dashboard</a>
-        <a href="statistics.php" class="nav-btn active">📈 Statistiques</a>
-        <a href="../front_office/list_posts.php" class="nav-btn">👁️ Forum</a>
+        <a href="<?= htmlspecialchars(forum_admin_nav_base()) ?>" class="nav-btn">🛠️ Dashboard</a>
+        <a href="<?= htmlspecialchars(forum_admin_nav_base()) ?>?page=statistics" class="nav-btn active">📈 Statistiques</a>
+        <a href="<?= htmlspecialchars(forum_list_url('page=home')) ?>" class="nav-btn">👁️ Forum</a>
     </div>
 </nav>
 
@@ -364,12 +376,17 @@ foreach ($monthly as $m) {
         <div class="kpi-card orange">
             <span class="kpi-icon">👍</span>
             <div class="kpi-value"><?= number_format($totalLikes) ?></div>
-            <div class="kpi-label">Likes</div>
+            <div class="kpi-label">Likes (toutes cibles)</div>
+            <div class="kpi-hint">
+                Publications : <?= number_format($likesOnPosts) ?> ·
+                Réponses : <?= number_format($likesOnReplies) ?>
+            </div>
         </div>
         <div class="kpi-card red">
             <span class="kpi-icon">👁️</span>
             <div class="kpi-value"><?= number_format($totalViews) ?></div>
-            <div class="kpi-label">Vues totales</div>
+            <div class="kpi-label">Vues cumulées</div>
+            <div class="kpi-hint">Somme des compteurs par discussion (chaque affichage GET du détail +1).</div>
         </div>
     </div>
 
@@ -413,10 +430,15 @@ foreach ($monthly as $m) {
                             <tr>
                                 <td class="rank <?= $rankClass ?>">#<?= $i + 1 ?></td>
                                 <td>
-                                    <a href="../front_office/view_post.php?id=<?= (int)$row['id'] ?>"
+                                    <a href="<?= htmlspecialchars(forum_post_url((int)$row['id'])) ?>"
                                        class="post-link">
-                                        <?= htmlspecialchars(mb_substr($row['title'], 0, 45)) ?>
-                                        <?= mb_strlen($row['title']) > 45 ? '…' : '' ?>
+                                        <?php
+                                        $t = (string)($row['title'] ?? '');
+                                        $snippet = function_exists('mb_substr') ? mb_substr($t, 0, 45, 'UTF-8') : substr($t, 0, 45);
+                                        $long = function_exists('mb_strlen') ? mb_strlen($t, 'UTF-8') : strlen($t);
+                                        ?>
+                                        <?= htmlspecialchars($snippet) ?>
+                                        <?= $long > 45 ? '…' : '' ?>
                                     </a>
                                 </td>
                                 <td style="text-align:right">
@@ -443,10 +465,15 @@ foreach ($monthly as $m) {
                             <tr>
                                 <td class="rank <?= $rankClass ?>">#<?= $i + 1 ?></td>
                                 <td>
-                                    <a href="../front_office/view_post.php?id=<?= (int)$row['id'] ?>"
+                                    <a href="<?= htmlspecialchars(forum_post_url((int)$row['id'])) ?>"
                                        class="post-link">
-                                        <?= htmlspecialchars(mb_substr($row['title'], 0, 45)) ?>
-                                        <?= mb_strlen($row['title']) > 45 ? '…' : '' ?>
+                                        <?php
+                                        $t = (string)($row['title'] ?? '');
+                                        $snippet = function_exists('mb_substr') ? mb_substr($t, 0, 45, 'UTF-8') : substr($t, 0, 45);
+                                        $long = function_exists('mb_strlen') ? mb_strlen($t, 'UTF-8') : strlen($t);
+                                        ?>
+                                        <?= htmlspecialchars($snippet) ?>
+                                        <?= $long > 45 ? '…' : '' ?>
                                     </a>
                                 </td>
                                 <td style="text-align:right">

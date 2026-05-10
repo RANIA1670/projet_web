@@ -3,17 +3,22 @@
  * Vue Front-Office : Suppression d'une réponse
  */
 
-// Vérification que l'utilisateur est connecté
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once __DIR__ . '/../../config/ForumRedirect.php';
+
 $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$isAdmin = !empty($_SESSION['is_admin']);
 
 if ($currentUserId === 0) {
-    header('Location: login.php');
+    header('Location: ' . forum_list_url('page=home'));
     exit;
 }
 
-// Vérifier si les IDs sont fournis
-if (!isset($_GET['id']) || !is_numeric($_GET['id']) || !isset($_GET['post_id']) || !is_numeric($_GET['post_id'])) {
-    header('Location: list_posts.php');
+if (!isset($_GET['id'], $_GET['post_id']) || !is_numeric($_GET['id']) || !is_numeric($_GET['post_id'])) {
+    header('Location: ' . forum_list_url('page=home'));
     exit;
 }
 
@@ -26,23 +31,20 @@ require_once __DIR__ . '/../../models/Reply.php';
 $controller = new ForumController();
 $reply = Reply::findById($replyId);
 
-// Vérifier que la réponse existe
 if (!$reply) {
-    header('Location: view_post.php?id=' . $postId);
+    header('Location: ' . forum_post_url($postId));
     exit;
 }
 
-// Vérifier que l'utilisateur est l'auteur de la réponse
-if ($reply->getUserId() !== $currentUserId) {
-    header('Location: view_post.php?id=' . $postId);
+if ($reply->getUserId() !== $currentUserId && !$isAdmin) {
+    header('Location: ' . forum_post_url($postId));
     exit;
 }
 
-// Supprimer la réponse
 if ($controller->deleteReply($replyId)) {
-    header('Location: view_post.php?id=' . $postId);
-    exit;
-} else {
-    header('Location: view_post.php?id=' . $postId);
+    header('Location: ' . forum_post_url($postId));
     exit;
 }
+
+header('Location: ' . forum_post_url($postId));
+exit;
