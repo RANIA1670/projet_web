@@ -279,6 +279,186 @@ function cityzen_db_ensure_schema(PDO $pdo): void
             /* ignore si concurrence ou droits */
         }
     }
+
+    // ─── Module interventions & signalements (branche_fatma, tables préfixées interv_) ───
+    cityzen_db_ensure_interventions_module($pdo);
+}
+
+/**
+ * Tables dédiées au module intervenions/signalements (pas de collision avec users CityZen).
+ */
+function cityzen_db_ensure_interventions_module(PDO $pdo): void
+{
+    if (!cityzen_db_table_exists($pdo, 'interv_categories')) {
+        $pdo->exec(
+            "CREATE TABLE interv_categories (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                nom VARCHAR(100) NOT NULL,
+                icone VARCHAR(50) NOT NULL DEFAULT 'fa-exclamation-circle',
+                couleur VARCHAR(20) NOT NULL DEFAULT '#2C3E50'
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_techniciens')) {
+        $pdo->exec(
+            "CREATE TABLE interv_techniciens (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                nom VARCHAR(100) NOT NULL,
+                prenom VARCHAR(100) NOT NULL,
+                email VARCHAR(190) NOT NULL,
+                telephone VARCHAR(30) NOT NULL DEFAULT '',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_interv_tech_email (email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_signalements')) {
+        $pdo->exec(
+            "CREATE TABLE interv_signalements (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NULL,
+                titre VARCHAR(200) NOT NULL,
+                description TEXT NOT NULL,
+                categorie_id INT UNSIGNED NULL,
+                adresse VARCHAR(255) NOT NULL,
+                latitude DECIMAL(10,8) NULL,
+                longitude DECIMAL(11,8) NULL,
+                priorite ENUM('faible','moyenne','haute','urgente') NOT NULL DEFAULT 'moyenne',
+                statut ENUM('nouveau','en_attente','en_cours','resolu','ferme') NOT NULL DEFAULT 'nouveau',
+                image VARCHAR(255) NULL,
+                date_incident DATE NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                KEY idx_interv_sig_statut (statut),
+                KEY idx_interv_sig_cat (categorie_id),
+                KEY idx_interv_sig_user (user_id),
+                CONSTRAINT fk_interv_sig_cat FOREIGN KEY (categorie_id) REFERENCES interv_categories (id)
+                    ON DELETE SET NULL ON UPDATE CASCADE,
+                CONSTRAINT fk_interv_sig_user FOREIGN KEY (user_id) REFERENCES users (id)
+                    ON DELETE SET NULL ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_interventions')) {
+        $pdo->exec(
+            "CREATE TABLE interv_interventions (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                signalement_id INT UNSIGNED NULL,
+                technicien_id INT UNSIGNED NULL,
+                titre VARCHAR(200) NOT NULL,
+                description TEXT NULL,
+                statut ENUM('planifiee','en_cours','terminee','annulee') NOT NULL DEFAULT 'planifiee',
+                date_planifiee DATE NULL,
+                date_debut DATETIME NULL,
+                date_fin DATETIME NULL,
+                notes TEXT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                KEY idx_interv_int_sig (signalement_id),
+                KEY idx_interv_int_tech (technicien_id),
+                CONSTRAINT fk_interv_int_sig FOREIGN KEY (signalement_id) REFERENCES interv_signalements (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_interv_int_tech FOREIGN KEY (technicien_id) REFERENCES interv_techniciens (id)
+                    ON DELETE SET NULL ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_suivi_interventions')) {
+        $pdo->exec(
+            "CREATE TABLE interv_suivi_interventions (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                intervention_id INT UNSIGNED NOT NULL,
+                statut VARCHAR(100) NOT NULL DEFAULT '',
+                commentaire TEXT NULL,
+                created_by INT UNSIGNED NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_interv_suivi_int (intervention_id),
+                CONSTRAINT fk_interv_suivi_int FOREIGN KEY (intervention_id) REFERENCES interv_interventions (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_interv_suivi_tech FOREIGN KEY (created_by) REFERENCES interv_techniciens (id)
+                    ON DELETE SET NULL ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_contacts')) {
+        $pdo->exec(
+            "CREATE TABLE interv_contacts (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                nom VARCHAR(150) NOT NULL,
+                email VARCHAR(190) NOT NULL,
+                sujet VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                statut ENUM('non_lu','lu','traite') NOT NULL DEFAULT 'non_lu',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_notifications')) {
+        $pdo->exec(
+            "CREATE TABLE interv_notifications (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                titre VARCHAR(255) NOT NULL,
+                message TEXT NULL,
+                signalement_id INT UNSIGNED NULL,
+                intervention_id INT UNSIGNED NULL,
+                lue TINYINT(1) NOT NULL DEFAULT 0,
+                read_at DATETIME NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_interv_notif_user (user_id),
+                CONSTRAINT fk_interv_notif_user FOREIGN KEY (user_id) REFERENCES users (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'interv_demandes_intervention')) {
+        $pdo->exec(
+            "CREATE TABLE interv_demandes_intervention (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NULL,
+                signalement_id INT UNSIGNED NULL,
+                nom_demandeur VARCHAR(150) NOT NULL,
+                email_demandeur VARCHAR(150) NOT NULL,
+                telephone VARCHAR(30) NOT NULL DEFAULT '',
+                type_intervention VARCHAR(100) NOT NULL DEFAULT '',
+                description TEXT NOT NULL,
+                urgence ENUM('normal','urgent','tres_urgent') NOT NULL DEFAULT 'normal',
+                statut ENUM('en_attente','acceptee','refusee','en_cours','terminee') NOT NULL DEFAULT 'en_attente',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_interv_dem_user (user_id),
+                CONSTRAINT fk_interv_dem_user FOREIGN KEY (user_id) REFERENCES users (id)
+                    ON DELETE SET NULL ON UPDATE CASCADE,
+                CONSTRAINT fk_interv_dem_sig FOREIGN KEY (signalement_id) REFERENCES interv_signalements (id)
+                    ON DELETE SET NULL ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    if (
+        cityzen_db_table_exists($pdo, 'interv_categories')
+        && (int) $pdo->query('SELECT COUNT(*) FROM interv_categories')->fetchColumn() === 0
+    ) {
+        try {
+            $pdo->exec(
+                "INSERT INTO interv_categories (nom, icone, couleur) VALUES
+                ('Voirie & Routes', 'fa-road', '#E67E22'),
+                ('Éclairage Public', 'fa-lightbulb', '#F1C40F'),
+                ('Espaces Verts', 'fa-leaf', '#27AE60'),
+                ('Déchets & Propreté', 'fa-trash', '#8E44AD'),
+                ('Eau & Assainissement', 'fa-tint', '#2980B9'),
+                ('Sécurité', 'fa-shield-alt', '#E74C3C')"
+            );
+        } catch (PDOException) {
+        }
+    }
 }
 
 function cityzen_db_seed_if_empty(PDO $pdo): void

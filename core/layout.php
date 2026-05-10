@@ -9,7 +9,7 @@ function cityzen_base_path(): string
 
     // Scripts under these folders live one level below site root; assets/ is at project root
     // (omit the folder from the URL prefix so cityzen_asset('assets/css/style.css') resolves).
-    if (in_array($lastSegment, ['admin', 'api', 'includes', 'controller', 'equipment', 'forum', 'events'], true)) {
+    if (in_array($lastSegment, ['admin', 'api', 'includes', 'controller', 'equipment', 'forum', 'events', 'interventions'], true)) {
         $script = dirname($script);
     }
 
