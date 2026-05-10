@@ -24,13 +24,14 @@
     <!-- Copilot CSS -->
     <link rel="stylesheet" href="<?= APP_URL ?>/public/assets/css/copilot.css">
 </head>
-<body>
 <?php
 $cityzenIntervTopbar = dirname(__DIR__, 4) . '/events/views/layouts/cityzen_topbar.php';
-if (is_file($cityzenIntervTopbar)) {
-    include $cityzenIntervTopbar;
-}
+$interventionsHasPortalTopbar = is_file($cityzenIntervTopbar);
 ?>
+<body <?= $interventionsHasPortalTopbar ? 'class="interventions-has-portal-topbar"' : '' ?>>
+<?php if ($interventionsHasPortalTopbar) {
+    include $cityzenIntervTopbar;
+} ?>
 
 <!-- ========== NAVBAR ========== -->
 <nav class="navbar" id="mainNavbar">

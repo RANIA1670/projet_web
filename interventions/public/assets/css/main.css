@@ -50,8 +50,92 @@
   --transition:     all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast:all 0.15s ease;
   --navbar-height:  70px;
+  /* Décalage barre citoyenne CityZen (voir body.interventions-has-portal-topbar) */
+  --cityzen-portal-topbar-stack: 0px;
+  --interventions-fixed-header-stack: calc(var(--cityzen-portal-topbar-stack) + var(--navbar-height));
   --font-main:      'Montserrat', sans-serif;
   --font-body:      'Inter', sans-serif;
+}
+
+/* ─── Portail CityZen au-dessus de la navbar module (toujours visible au scroll) ─── */
+body.interventions-has-portal-topbar {
+  --cityzen-portal-topbar-stack: 72px;
+}
+body.interventions-has-portal-topbar .topbar.topbar-public {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1101;
+  box-sizing: border-box;
+  width: min(96%, 1120px);
+  margin: 10px auto 0;
+  padding: 14px 18px;
+  border-radius: 14px 14px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #2f4358;
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(29, 53, 87, 0.12);
+  font-family: var(--font-body);
+}
+body.interventions-has-portal-topbar .topbar-public .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-family: var(--font-main);
+  letter-spacing: -0.03em;
+}
+body.interventions-has-portal-topbar .topbar-public .brand-dot {
+  width: 9px;
+  height: 9px;
+  background: var(--secondary);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+body.interventions-has-portal-topbar .topbar-public .brand-text strong {
+  color: var(--secondary-light);
+}
+body.interventions-has-portal-topbar .topbar-public .main-nav,
+body.interventions-has-portal-topbar .topbar-public .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+body.interventions-has-portal-topbar .topbar-public .main-nav a {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body.interventions-has-portal-topbar .topbar-public .main-nav a.is-active,
+body.interventions-has-portal-topbar .topbar-public .main-nav a:hover {
+  color: #fff;
+}
+body.interventions-has-portal-topbar .topbar-public .avatar {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+body.interventions-has-portal-topbar .topbar-public .avatar-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+body.interventions-has-portal-topbar .topbar-public .avatar-photo {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
 }
 
 /* ─── Reset & Base ─── */
@@ -205,7 +289,8 @@ p  { font-size: 1rem; color: var(--text-secondary); line-height: 1.75; }
 /* ─── NAVBAR ─── */
 .navbar {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: var(--cityzen-portal-topbar-stack);
+  left: 0; right: 0;
   height: var(--navbar-height);
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(20px);
@@ -374,7 +459,7 @@ p  { font-size: 1rem; color: var(--text-secondary); line-height: 1.75; }
 /* ─── Flash Messages ─── */
 .flash-container {
   position: fixed;
-  top: calc(var(--navbar-height) + 16px);
+  top: calc(var(--interventions-fixed-header-stack) + 16px);
   right: 24px;
   z-index: 999;
   animation: slideInRight 0.4s ease;
@@ -404,7 +489,10 @@ p  { font-size: 1rem; color: var(--text-secondary); line-height: 1.75; }
 .flash-close:hover { opacity: 1; }
 
 /* ─── Main Content ─── */
-.main-content { margin-top: var(--navbar-height); min-height: calc(100vh - var(--navbar-height)); }
+.main-content {
+  margin-top: var(--interventions-fixed-header-stack);
+  min-height: calc(100vh - var(--interventions-fixed-header-stack));
+}
 
 /* ─── Cards ─── */
 .card {
@@ -1307,7 +1395,7 @@ tr:hover td { background: var(--gray-50); }
   .nav-links.open, .nav-actions.open { display: flex; }
   .nav-links {
     position: fixed;
-    top: var(--navbar-height); left: 0; right: 0;
+    top: var(--interventions-fixed-header-stack); left: 0; right: 0;
     background: var(--white);
     flex-direction: column;
     padding: 16px;
@@ -1317,7 +1405,7 @@ tr:hover td { background: var(--gray-50); }
   }
   .nav-actions {
     position: fixed;
-    top: calc(var(--navbar-height) + 200px); left: 0; right: 0;
+    top: calc(var(--interventions-fixed-header-stack) + 200px); left: 0; right: 0;
     background: var(--white);
     flex-direction: column;
     padding: 16px;
