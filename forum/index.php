@@ -2,81 +2,74 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/layout.php';
-require_once __DIR__ . '/../includes/forum_store.php';
+/**
+ * Forum public — routeur aligné sur la branche amine (RANIA1670/projet_web).
+ */
 
-$activeCategory = isset($_GET['category']) ? (int) $_GET['category'] : null;
-if ($activeCategory !== null && $activeCategory <= 0) {
-    $activeCategory = null;
+require_once __DIR__ . '/../core/Bootstrap.php';
+
+App\Core\Bootstrap::init();
+
+cityzen_session_start();
+$_SESSION['user_id'] = cityzen_current_user_id() > 0 ? cityzen_current_user_id() : 0;
+$_SESSION['is_admin'] = cityzen_is_agent();
+
+$page = isset($_GET['page']) ? trim((string) $_GET['page']) : 'home';
+
+require_once __DIR__ . '/config/ForumRedirect.php';
+require_once __DIR__ . '/config/Database.php';
+require_once __DIR__ . '/controllers/ForumController.php';
+require_once __DIR__ . '/models/Post.php';
+require_once __DIR__ . '/models/Reply.php';
+require_once __DIR__ . '/models/Like.php';
+
+switch ($page) {
+    case 'post':
+        if (isset($_GET['id'])) {
+            include __DIR__ . '/views/front_office/view_post.php';
+        } else {
+            include __DIR__ . '/views/front_office/list_posts.php';
+        }
+        break;
+
+    case 'create':
+        include __DIR__ . '/views/front_office/create_post.php';
+        break;
+
+    case 'edit':
+        if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+            header('Location: ' . forum_admin_nav_base() . '?page=edit_post&id=' . (int) $_GET['id'], true, 302);
+            exit;
+        }
+        include __DIR__ . '/views/front_office/list_posts.php';
+        break;
+
+    case 'delete':
+        if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+            header('Location: ' . forum_admin_nav_base() . '?page=delete_post&id=' . (int) $_GET['id'], true, 302);
+            exit;
+        }
+        include __DIR__ . '/views/front_office/list_posts.php';
+        break;
+
+    case 'edit_reply':
+        if (isset($_GET['id'], $_GET['post_id']) && is_numeric($_GET['id']) && is_numeric($_GET['post_id'])) {
+            header('Location: ' . forum_admin_nav_base() . '?page=edit_reply&id=' . (int) $_GET['id'] . '&post_id=' . (int) $_GET['post_id'], true, 302);
+            exit;
+        }
+        include __DIR__ . '/views/front_office/list_posts.php';
+        break;
+
+    case 'delete_reply':
+        if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+            header('Location: ' . forum_admin_nav_base() . '?page=delete_reply&id=' . (int) $_GET['id'], true, 302);
+            exit;
+        }
+        include __DIR__ . '/views/front_office/list_posts.php';
+        break;
+
+    case 'home':
+    default:
+        include __DIR__ . '/views/front_office/list_posts.php';
+        break;
 }
-
-$flash = (string) ($_GET['msg'] ?? '');
-$flashType = (string) ($_GET['type'] ?? '');
-
-$categories = cityzen_forum_categories_with_count();
-$posts = cityzen_forum_posts($activeCategory, 60);
-
-cityzen_render_head('Forum citoyen', [cityzen_asset('assets/css/forum.css')]);
-?>
-<div class="site-shell">
-  <header class="topbar topbar-public">
-    <div class="brand"><span class="brand-dot"></span><span class="brand-text">City <strong>Zen</strong></span></div>
-    <nav class="main-nav">
-      <?php foreach (cityzen_full_public_nav($cityzen['public_menu']) as $item): ?>
-        <?php $href = str_starts_with($item['url'], '/') ? cityzen_asset(ltrim($item['url'], '/')) : $item['url']; ?>
-        <a href="<?= htmlspecialchars($href) ?>" class="<?= ($item['key'] ?? '') === 'forum' ? 'is-active' : '' ?>"><?= htmlspecialchars($item['label']) ?></a>
-        <?php if (($item['key'] ?? '') === 'equipment' && cityzen_is_logged_in() && cityzen_current_user_id() > 0): ?>
-          <a href="<?= htmlspecialchars(cityzen_asset('equipment/my-reservations.php')) ?>">Mes réservations</a>
-        <?php endif; ?>
-      <?php endforeach; ?>
-    </nav>
-    <div class="topbar-actions"><span class="avatar avatar-success"><?= htmlspecialchars(cityzen_user_initials()) ?></span></div>
-  </header>
-
-  <main class="page public-page">
-    <section class="section-header">
-      <h2>Forum citoyen</h2>
-      <div class="forum-actions">
-        <a class="forum-btn primary" href="<?= htmlspecialchars(cityzen_asset('forum/new.php')) ?>">Nouveau post</a>
-      </div>
-    </section>
-    <?php if ($flash !== ''): ?>
-      <p class="<?= $flashType === 'ok' ? 'flash-ok' : 'flash-err' ?>"><?= htmlspecialchars($flash) ?></p>
-    <?php endif; ?>
-    <div class="forum-layout">
-      <aside class="forum-panel">
-        <h3>Catégories</h3>
-        <ul class="forum-cats">
-          <li><a href="<?= htmlspecialchars(cityzen_asset('forum/index.php')) ?>" class="<?= $activeCategory === null ? 'is-active' : '' ?>">Toutes</a></li>
-          <?php foreach ($categories as $cat): ?>
-            <li>
-              <a href="<?= htmlspecialchars(cityzen_asset('forum/index.php?category=' . (int) $cat['id'])) ?>" class="<?= $activeCategory === (int) $cat['id'] ? 'is-active' : '' ?>">
-                <?= htmlspecialchars($cat['name']) ?> (<?= (int) $cat['posts_count'] ?>)
-              </a>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      </aside>
-      <section class="forum-panel">
-        <div class="forum-post-list">
-          <?php foreach ($posts as $post): ?>
-            <article class="forum-post-item">
-              <h3><a href="<?= htmlspecialchars(cityzen_asset('forum/post.php?id=' . (int) $post['id'])) ?>"><?= htmlspecialchars((string) $post['title']) ?></a></h3>
-              <p class="forum-meta">
-                Catégorie: <?= htmlspecialchars((string) $post['category_name']) ?> —
-                Par <?= htmlspecialchars((string) $post['username']) ?> —
-                <?= htmlspecialchars((string) $post['created_at']) ?> —
-                Réponses: <?= (int) $post['replies_count'] ?>
-              </p>
-              <p><?= nl2br(htmlspecialchars(mb_strimwidth((string) $post['content'], 0, 260, '…'))) ?></p>
-            </article>
-          <?php endforeach; ?>
-          <?php if ($posts === []): ?>
-            <p>Aucun post pour le moment.</p>
-          <?php endif; ?>
-        </div>
-      </section>
-    </div>
-  </main>
-</div>
-<?php cityzen_render_footer(); ?>

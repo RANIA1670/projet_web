@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../core/Bootstrap.php';
+
+App\Core\Bootstrap::init();
 
 cityzen_require_agent();
-
-require_once __DIR__ . '/../includes/db.php';
 
 $id = (int) ($_GET['id'] ?? 0);
 if ($id <= 0) {

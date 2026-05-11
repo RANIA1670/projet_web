@@ -280,8 +280,103 @@ function cityzen_db_ensure_schema(PDO $pdo): void
         }
     }
 
+    // ─── Module Forum (branche amine : posts, replies, likes — même base CityZen) ───
+    cityzen_db_ensure_amine_forum_tables($pdo);
+
     // ─── Module interventions & signalements (branche_fatma, tables préfixées interv_) ───
     cityzen_db_ensure_interventions_module($pdo);
+}
+
+/**
+ * Schéma forum branche amine (models/Post, Reply, Like) dans la base CityZen.
+ */
+function cityzen_db_ensure_amine_forum_tables(PDO $pdo): void
+{
+    if (!cityzen_db_table_exists($pdo, 'posts')) {
+        $pdo->exec(
+            'CREATE TABLE posts (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id INT UNSIGNED NOT NULL,
+                title VARCHAR(150) NOT NULL,
+                content LONGTEXT NOT NULL,
+                view_count INT NOT NULL DEFAULT 0,
+                is_featured TINYINT(1) NOT NULL DEFAULT 0,
+                status VARCHAR(32) NOT NULL DEFAULT \'Actif\',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_posts_user (user_id),
+                KEY idx_posts_created (created_at),
+                CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'replies')) {
+        $pdo->exec(
+            'CREATE TABLE replies (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                post_id INT UNSIGNED NOT NULL,
+                user_id INT UNSIGNED NOT NULL,
+                content LONGTEXT NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_replies_post (post_id),
+                KEY idx_replies_user (user_id),
+                CONSTRAINT fk_replies_post FOREIGN KEY (post_id) REFERENCES posts (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_replies_user FOREIGN KEY (user_id) REFERENCES users (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    if (!cityzen_db_table_exists($pdo, 'likes')) {
+        $pdo->exec(
+            'CREATE TABLE likes (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                post_id INT UNSIGNED NULL DEFAULT NULL,
+                reply_id INT UNSIGNED NULL DEFAULT NULL,
+                user_id INT UNSIGNED NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_likes_post_user (post_id, user_id),
+                KEY idx_likes_reply_user (reply_id, user_id),
+                CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_likes_post FOREIGN KEY (post_id) REFERENCES posts (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT fk_likes_reply FOREIGN KEY (reply_id) REFERENCES replies (id)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    }
+
+    $postCount = (int) $pdo->query('SELECT COUNT(*) FROM posts')->fetchColumn();
+    if ($postCount === 0) {
+        $firstUser = (int) $pdo->query('SELECT id FROM users ORDER BY id ASC LIMIT 1')->fetchColumn();
+        if ($firstUser > 0) {
+            $stmt = $pdo->prepare(
+                'INSERT INTO posts (user_id, title, content, view_count, is_featured, status) VALUES (?, ?, ?, 0, 0, \'Actif\')'
+            );
+            try {
+                $stmt->execute([
+                    $firstUser,
+                    'Bienvenue sur le Forum',
+                    'Ceci est le premier post du forum. N\'hésitez pas à partager vos idées et vos questions ici.',
+                ]);
+                $stmt->execute([
+                    $firstUser,
+                    'Guide d\'utilisation du forum',
+                    'Quelques règles : soyez respectueux, évitez le spam, et contribuez de manière constructive.',
+                ]);
+            } catch (PDOException) {
+                /* ignore */
+            }
+        }
+    }
 }
 
 /**
